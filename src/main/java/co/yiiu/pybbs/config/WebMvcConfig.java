@@ -41,7 +41,7 @@ public class WebMvcConfig extends WebMvcConfigurationSupport {
         registry.addInterceptor(commonInterceptor).addPathPatterns("/**");
         // 用户拦截器，拦截用户是否登录
         registry.addInterceptor(userInterceptor).addPathPatterns("/settings", "/settings/*", "/topic/create", "/*", "/topic/*")
-                .excludePathPatterns("/login");
+                .excludePathPatterns("/login", "/register");
     }
 
     @Override
