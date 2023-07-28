@@ -1,5 +1,6 @@
 package co.yiiu.pybbs.util;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -73,6 +74,7 @@ public class FileUtil {
      * @return
      */
     public String upload(MultipartFile file, String fileName, String customPath) {
+        log.info("upload");
         try {
             if (file == null || file.isEmpty()) return null;
 
@@ -156,7 +158,10 @@ public class FileUtil {
             //默认不指定key的情况下，以文件内容的hash值作为文件名
             String key = fileName;
             String upToken = auth.uploadToken(qiniuBucket, key);
+            log.info("qiniuKey:{},qiniuSecret:{},qiniuBucket:{},qiniuDomain:{}", qiniuKey, qiniuSecret, qiniuBucket, qiniuDomain);
+            log.info("key:{},upToken:{}", key, upToken);
             Response response = uploadManager.put(file.getInputStream(), key, upToken, null, null);
+            log.info("url:{}", qiniuDomain + "/" + fileName);
             //response.bodyString(): {"hash":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH","key":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH"}
             return qiniuDomain + "/" + fileName;
         } catch (IOException e) {
@@ -172,7 +177,8 @@ public class FileUtil {
             String qiniuSecret = "RhNP3k8TbitmJ7J1rZ-tO0NSAXjNr4YtjmbYiLJ8";
             String qiniuBucket = "vedio-dlj";
             String qiniuDomain = "/aaa";
-            String localFilePath = "F:\\bbb.jpg";
+            byte[] uploadBytes = "hello qiniu cloud".getBytes("utf-8");
+            ByteArrayInputStream byteInputStream = new ByteArrayInputStream(uploadBytes);
             String fileName = "abc";
             if (StringUtils.isEmpty(fileName)) fileName = StringUtil.uuid();
 //            String suffix = "." + Objects.requireNonNull(file.getContentType()).split("/")[1];
@@ -182,8 +188,8 @@ public class FileUtil {
             Auth auth = Auth.create(qiniuKey, qiniuSecret);
             //默认不指定key的情况下，以文件内容的hash值作为文件名
             String key = fileName;
-            String upToken = auth.uploadToken(qiniuBucket);
-            Response response = uploadManager.put(localFilePath, key, upToken);
+            String upToken = auth.uploadToken(qiniuBucket, key);
+            Response response = uploadManager.put(byteInputStream, key, upToken, null, null);
             System.out.println(response);
             //response.bodyString(): {"hash":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH","key":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH"}
             System.out.printf("qiniuDomain + \"/\" + fileName");

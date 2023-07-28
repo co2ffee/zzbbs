@@ -1,19 +1,44 @@
 package co.yiiu.pybbs.controller.api;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpSession;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import co.yiiu.pybbs.exception.ApiAssert;
 import co.yiiu.pybbs.model.Code;
 import co.yiiu.pybbs.model.Tag;
 import co.yiiu.pybbs.model.User;
-import co.yiiu.pybbs.service.*;
-import co.yiiu.pybbs.util.*;
+import co.yiiu.pybbs.service.ICodeService;
+import co.yiiu.pybbs.service.ISystemConfigService;
+import co.yiiu.pybbs.service.ITagService;
+import co.yiiu.pybbs.service.ITopicService;
+import co.yiiu.pybbs.service.IUserService;
+import co.yiiu.pybbs.util.CookieUtil;
+import co.yiiu.pybbs.util.FileUtil;
+import co.yiiu.pybbs.util.MyPage;
+import co.yiiu.pybbs.util.Result;
+import co.yiiu.pybbs.util.SensitiveWordUtil;
+import co.yiiu.pybbs.util.StringUtil;
 import co.yiiu.pybbs.util.bcrypt.BCryptPasswordEncoder;
-import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import javax.annotation.Resource;
-import javax.servlet.http.HttpSession;
-import java.util.*;
 
 /**
  * Created by tomoya.
@@ -38,6 +63,9 @@ public class IndexApiController extends BaseApiController {
     private FileUtil fileUtil;
     @Resource
     private ICodeService codeService;
+
+
+    private final Logger log = LoggerFactory.getLogger(IndexApiController.class);
 
     // 首页接口
     @GetMapping({"/", "/index"})
@@ -224,6 +252,7 @@ public class IndexApiController extends BaseApiController {
             } else if (type.equalsIgnoreCase("topic")) { // 发帖上传图片
                 url = fileUtil.upload(file, null, "topic/" + user.getUsername());
             } else if (type.equalsIgnoreCase("video")) { // 视频上传
+                log.info("vedio upload");
                 url = fileUtil.upload(file, null, "video/" + user.getUsername());
             } else {
                 errors.add("第[" + (i + 1) + "]个文件异常: " + "上传图片类型不在处理范围内");
