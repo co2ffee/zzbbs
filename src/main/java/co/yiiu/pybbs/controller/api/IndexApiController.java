@@ -239,7 +239,7 @@ public class IndexApiController extends BaseApiController {
             }
             if (type.equalsIgnoreCase("avatar")) { // 上传头像
                 // 拿到上传后访问的url
-                url = fileUtil.upload(file, "avatar", "avatar/" + user.getUsername());
+                url = fileUtil.upload(file, null, "avatar/" + user.getUsername());
                 if (url != null) {
                     // 查询当前用户的最新信息
                     User user1 = userService.selectById(user.getId());
