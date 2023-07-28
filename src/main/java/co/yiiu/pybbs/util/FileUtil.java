@@ -1,20 +1,5 @@
 package co.yiiu.pybbs.util;
 
-import co.yiiu.pybbs.service.ISystemConfigService;
-import com.aliyun.oss.OSSClient;
-import com.aliyun.oss.model.GeneratePresignedUrlRequest;
-import com.qiniu.http.Response;
-import com.qiniu.storage.Configuration;
-import com.qiniu.storage.Region;
-import com.qiniu.storage.UploadManager;
-import com.qiniu.util.Auth;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
-
-import javax.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,6 +8,24 @@ import java.net.URL;
 import java.security.MessageDigest;
 import java.util.Date;
 import java.util.Objects;
+
+import javax.annotation.Resource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.aliyun.oss.OSSClient;
+import com.aliyun.oss.model.GeneratePresignedUrlRequest;
+import com.qiniu.http.Response;
+import com.qiniu.storage.Configuration;
+import com.qiniu.storage.Region;
+import com.qiniu.storage.UploadManager;
+import com.qiniu.util.Auth;
+
+import co.yiiu.pybbs.service.ISystemConfigService;
 
 /**
  * Created by tomoya.
@@ -147,7 +150,7 @@ public class FileUtil {
             if (StringUtils.isEmpty(fileName)) fileName = StringUtil.uuid();
             String suffix = "." + Objects.requireNonNull(file.getContentType()).split("/")[1];
             fileName += suffix;
-            Configuration cfg = new Configuration(Region.region2());
+            Configuration cfg = new Configuration(Region.autoRegion());
             UploadManager uploadManager = new UploadManager(cfg);
             Auth auth = Auth.create(qiniuKey, qiniuSecret);
             //默认不指定key的情况下，以文件内容的hash值作为文件名
@@ -159,6 +162,33 @@ public class FileUtil {
         } catch (IOException e) {
             log.error(e.getMessage());
             return null;
+        }
+    }
+
+
+    public static void main(String[] args) {
+        try {
+            String qiniuKey = "JG0fmIMS7wS8wMMXh6wAllcPSYYBUa8y2YoKICUI";
+            String qiniuSecret = "RhNP3k8TbitmJ7J1rZ-tO0NSAXjNr4YtjmbYiLJ8";
+            String qiniuBucket = "vedio-dlj";
+            String qiniuDomain = "/aaa";
+            String localFilePath = "F:\\bbb.jpg";
+            String fileName = "abc";
+            if (StringUtils.isEmpty(fileName)) fileName = StringUtil.uuid();
+//            String suffix = "." + Objects.requireNonNull(file.getContentType()).split("/")[1];
+//            fileName += suffix;
+            Configuration cfg = new Configuration(Region.autoRegion());
+            UploadManager uploadManager = new UploadManager(cfg);
+            Auth auth = Auth.create(qiniuKey, qiniuSecret);
+            //默认不指定key的情况下，以文件内容的hash值作为文件名
+            String key = fileName;
+            String upToken = auth.uploadToken(qiniuBucket);
+            Response response = uploadManager.put(localFilePath, key, upToken);
+            System.out.println(response);
+            //response.bodyString(): {"hash":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH","key":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH"}
+            System.out.printf("qiniuDomain + \"/\" + fileName");
+        } catch (IOException e) {
+
         }
     }
 }
