@@ -6,14 +6,5 @@
         <a href="/changeLanguage?lang=en">English</a>
       </span>
         </p>
-        <div>
-            &copy;2023 dljdlj&nbsp;
-            <span class="pull-right">
-        powered by <a href="https://dljdlj.top" target="_blank">dljdlj</a>
-      </span>
-        </div>
-    </div>
-    <div class="container text-center d-md-none">
-        powered by <a href="https://dljdlj.top" target="_blank">dljdlj</a>
     </div>
 </footer>
