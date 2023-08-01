@@ -13,16 +13,22 @@
                         </div>
                         <div class="form-group">
                             <label for="password">密码</label>
-                            <input type="password" id="password" name="password" class="form-control" placeholder="密码"/>
+                            <input type="password" id="password" name="password" class="form-control"
+                                   placeholder="密码"/>
                         </div>
                         <div class="form-group">
                             <label for="email">邮箱</label>
                             <input type="email" id="email" name="email" class="form-control" placeholder="邮箱"/>
                         </div>
                         <div class="form-group">
+                            <label for="invite">邀请码</label>
+                            <input type="text" id="invite" name="invite" class="form-control" placeholder="邀请码"/>
+                        </div>
+                        <div class="form-group">
                             <label for="captcha">验证码</label>
                             <div class="input-group">
-                                <input type="text" class="form-control" id="captcha" name="captcha" placeholder="验证码"/>
+                                <input type="text" class="form-control" id="captcha" name="captcha"
+                                       placeholder="验证码"/>
                                 <span class="input-group-append">
                                     <img style="border: 1px solid #ccc;" src="" class="captcha" id="changeCaptcha"/>
                                 </span>
@@ -78,6 +84,7 @@
                 var username = $("#username").val();
                 var password = $("#password").val();
                 var email = $("#email").val();
+                var invite = $("#invite").val();
                 var captcha = $("#captcha").val();
                 if (!username) {
                     err("请输入用户名");
@@ -91,6 +98,10 @@
                     err("请输入邮箱");
                     return;
                 }
+                if (!invite) {
+                    err("请输入邀请码");
+                    return;
+                }
                 if (!captcha) {
                     err("请输入验证码");
                     return;
@@ -99,6 +110,7 @@
                     username: username,
                     password: password,
                     email: email,
+                    invite: invite,
                     captcha: captcha,
                 }, function (data) {
                     if (data.code === 200) {
