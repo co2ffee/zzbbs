@@ -28,7 +28,6 @@ import com.backblaze.b2.client.contentSources.B2ByteArrayContentSource;
 import com.backblaze.b2.client.contentSources.B2ContentSource;
 import com.backblaze.b2.client.contentSources.B2ContentTypes;
 import com.backblaze.b2.client.exceptions.B2Exception;
-import com.backblaze.b2.client.structures.B2Bucket;
 import com.backblaze.b2.client.structures.B2FileVersion;
 import com.backblaze.b2.client.structures.B2UploadFileRequest;
 import com.qiniu.http.Response;
@@ -194,10 +193,9 @@ public class FileUtil {
             //默认不指定key的情况下，以文件内容的hash值作为文件名
             String key = fileName;
             log.info("backBlazeKeyId:{},backBlazeKey:{},backBlazeBucket:{},backBlazeDomain:{}", backBlazeKeyId, backBlazeKey, backBlazeBucket, backBlazeDomain);
-            B2Bucket b2Bucket = uploadManager.getBucketOrNullByName(backBlazeBucket);
             B2ContentSource source = B2ByteArrayContentSource.build(file.getBytes());
             B2UploadFileRequest request = B2UploadFileRequest
-                    .builder(b2Bucket.getBucketId(), fileName, B2ContentTypes.B2_AUTO, source)
+                    .builder(backBlazeBucket, fileName, B2ContentTypes.B2_AUTO, source)
                     .setCustomField("color", "blue")
                     .build();
             B2FileVersion b2FileVersion = uploadManager.uploadSmallFile(request);
