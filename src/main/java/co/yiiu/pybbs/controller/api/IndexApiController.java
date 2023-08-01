@@ -23,6 +23,9 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
+
 import co.yiiu.pybbs.exception.ApiAssert;
 import co.yiiu.pybbs.model.Code;
 import co.yiiu.pybbs.model.Tag;
@@ -118,6 +121,7 @@ public class IndexApiController extends BaseApiController {
         String username = body.get("username");
         String password = body.get("password");
         String email = body.get("email");
+        String invite = body.get("invite");
         String captcha = body.get("captcha");
         String _captcha = (String) session.getAttribute("_captcha");
         ApiAssert.notTrue(_captcha == null || StringUtils.isEmpty(captcha), "请输入验证码");
@@ -125,12 +129,16 @@ public class IndexApiController extends BaseApiController {
         ApiAssert.notEmpty(username, "请输入用户名");
         ApiAssert.notEmpty(password, "请输入密码");
         ApiAssert.notEmpty(email, "请输入邮箱");
+        ApiAssert.notEmpty(invite, "请输入邀请码");
         ApiAssert.isTrue(StringUtil.check(username, StringUtil.USERNAMEREGEX), "用户名只能为a-z,A-Z,0-9组合且2-16位");
         ApiAssert.isTrue(StringUtil.check(email, StringUtil.EMAILREGEX), "请输入正确的邮箱地址");
         User user = userService.selectByUsername(username);
         ApiAssert.isNull(user, "用户名已存在");
         User emailUser = userService.selectByEmail(email);
         ApiAssert.isNull(emailUser, "这个邮箱已经被注册过了，请更换一个邮箱");
+        List<String> invites = JSON.parseObject(systemConfigService.selectAllConfig().get("invite"), new TypeReference<List<String>>() {
+        });
+        ApiAssert.isTrue(invites.contains(invite), "邀请码不存在");
         user = userService.addUser(username, password, null, email, null, null, true);
         return this.doUserStorage(session, user);
     }
