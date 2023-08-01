@@ -2,6 +2,9 @@ package co.yiiu.pybbs.plugin;
 
 import co.yiiu.pybbs.service.ISystemConfigService;
 import co.yiiu.pybbs.util.FileUtil;
+
+import javax.annotation.Resource;
+
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -10,8 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-
-import javax.annotation.Resource;
 
 @Component
 @Aspect
@@ -34,11 +35,13 @@ public class FileUploadPlugin {
             return fileUtil.qiniuUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
         } else if (UploadPlatForm.OSS.name().equals(cloudStoragePlatform)) {
             return fileUtil.ossUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
+        } else if (UploadPlatForm.BACKBLAZE.name().equals(cloudStoragePlatform)) {
+            return fileUtil.backBlazeUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
         }
         return null;
     }
 
     enum UploadPlatForm {
-        LOCAL, QINIU, OSS
+        LOCAL, QINIU, OSS, BACKBLAZE
     }
 }
