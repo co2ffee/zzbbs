@@ -11,11 +11,11 @@ import java.net.URL;
 import java.security.MessageDigest;
 import java.util.Date;
 import java.util.Objects;
-
-import javax.annotation.Resource;
+import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,8 +46,12 @@ public class FileUtil {
 
     private final Logger log = LoggerFactory.getLogger(FileUtil.class);
 
-    @Resource
+    @Autowired
     private ISystemConfigService systemConfigService;
+
+    @Autowired
+    private ExecutorService executorService;
+
 
     public static String getFileMD5(InputStream in) {
         byte[] buffer = new byte[1024];
@@ -187,6 +191,7 @@ public class FileUtil {
             if (StringUtils.isEmpty(fileName)) fileName = StringUtil.uuid();
             String suffix = "." + Objects.requireNonNull(file.getContentType()).split("/")[1];
             fileName += suffix;
+            //异步操作
             B2StorageClient uploadManager = B2StorageClientFactory
                     .createDefaultFactory()
                     .create(backBlazeKeyId, backBlazeKey, "b2_4j/0.0.1");
@@ -198,7 +203,8 @@ public class FileUtil {
                     .builder(backBlazeBucket, fileName, B2ContentTypes.B2_AUTO, source)
                     .setCustomField("color", "blue")
                     .build();
-            B2FileVersion b2FileVersion = uploadManager.uploadSmallFile(request);
+//            B2FileVersion b2FileVersion = uploadManager.uploadSmallFile(request);
+            B2FileVersion b2FileVersion = uploadManager.uploadLargeFile(request, executorService);
             log.info("url:{}", backBlazeDomain + "/" + fileName);
             //response.bodyString(): {"hash":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH","key":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH"}
             return backBlazeDomain + "/" + fileName;
