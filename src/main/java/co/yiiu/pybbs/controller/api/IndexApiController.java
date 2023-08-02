@@ -216,6 +216,7 @@ public class IndexApiController extends BaseApiController {
     @PostMapping("/upload")
     @ResponseBody
     public Result upload(@RequestParam("file") MultipartFile[] files, String type, HttpSession session) {
+        log.info("upload controller");
         User user = getApiUser();
         ApiAssert.isTrue(user.getActive(), "你的帐号还没有激活，请去个人设置页面激活帐号");
         ApiAssert.notEmpty(type, "上传文件类型不能为空");

@@ -212,7 +212,9 @@ public class FileUtil {
 //            B2FileVersion b2FileVersion = uploadManager.uploadSmallFile(request);
                     B2FileVersion b2FileVersion = uploadManager.uploadSmallFile(request);
                     log.info("finalFileName finish:{}", finalFileName);
-                    diskFile.deleteOnExit();
+                    if (!diskFile.delete()) {
+                        log.info("file delete fail:{}", finalFileName);
+                    }
                 } catch (B2Exception e) {
                     log.error(e.getMessage());
                 }
