@@ -1,7 +1,5 @@
 package co.yiiu.pybbs.util;
 
-import co.yiiu.pybbs.service.ISystemConfigService;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -24,9 +22,9 @@ import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.model.GeneratePresignedUrlRequest;
 import com.backblaze.b2.client.B2StorageClient;
 import com.backblaze.b2.client.B2StorageClientFactory;
-import com.backblaze.b2.client.contentSources.B2ByteArrayContentSource;
 import com.backblaze.b2.client.contentSources.B2ContentSource;
 import com.backblaze.b2.client.contentSources.B2ContentTypes;
+import com.backblaze.b2.client.contentSources.B2FileContentSource;
 import com.backblaze.b2.client.exceptions.B2Exception;
 import com.backblaze.b2.client.structures.B2FileVersion;
 import com.backblaze.b2.client.structures.B2UploadFileRequest;
@@ -35,6 +33,8 @@ import com.qiniu.storage.Configuration;
 import com.qiniu.storage.Region;
 import com.qiniu.storage.UploadManager;
 import com.qiniu.util.Auth;
+
+import co.yiiu.pybbs.service.ISystemConfigService;
 
 /**
  * Created by tomoya.
@@ -183,35 +183,45 @@ public class FileUtil {
     }
 
     public String backBlazeUpload(MultipartFile file, String fileName, String customPath) {
+        String backBlazeKeyId = systemConfigService.selectAllConfig().get("backblaze_keyid");
+        String backBlazeKey = systemConfigService.selectAllConfig().get("backblaze_key");
+        String backBlazeBucket = systemConfigService.selectAllConfig().get("backblaze_bucket");
+        String backBlazeDomain = systemConfigService.selectAllConfig().get("backblaze_domain");
+        if (StringUtils.isEmpty(fileName)) fileName = StringUtil.uuid();
+        String suffix = "." + Objects.requireNonNull(file.getContentType()).split("/")[1];
+        fileName += suffix;
+        File diskFile = new File(System.getProperty("user.dir") + File.separator + fileName);
         try {
-            String backBlazeKeyId = systemConfigService.selectAllConfig().get("backblaze_keyid");
-            String backBlazeKey = systemConfigService.selectAllConfig().get("backblaze_key");
-            String backBlazeBucket = systemConfigService.selectAllConfig().get("backblaze_bucket");
-            String backBlazeDomain = systemConfigService.selectAllConfig().get("backblaze_domain");
-            if (StringUtils.isEmpty(fileName)) fileName = StringUtil.uuid();
-            String suffix = "." + Objects.requireNonNull(file.getContentType()).split("/")[1];
-            fileName += suffix;
+            file.transferTo(diskFile);
+
             //异步操作
-            B2StorageClient uploadManager = B2StorageClientFactory
-                    .createDefaultFactory()
-                    .create(backBlazeKeyId, backBlazeKey, "b2_4j/0.0.1");
-            //默认不指定key的情况下，以文件内容的hash值作为文件名
-            String key = fileName;
-            log.info("backBlazeKeyId:{},backBlazeKey:{},backBlazeBucket:{},backBlazeDomain:{}", backBlazeKeyId, backBlazeKey, backBlazeBucket, backBlazeDomain);
-            B2ContentSource source = B2ByteArrayContentSource.build(file.getBytes());
-            B2UploadFileRequest request = B2UploadFileRequest
-                    .builder(backBlazeBucket, fileName, B2ContentTypes.B2_AUTO, source)
-                    .setCustomField("color", "blue")
-                    .build();
+            String finalFileName = fileName;
+            executorService.execute(() -> {
+                try (B2StorageClient uploadManager = B2StorageClientFactory
+                        .createDefaultFactory()
+                        .create(backBlazeKeyId, backBlazeKey, "b2_4j/0.0.1")) {
+                    //默认不指定key的情况下，以文件内容的hash值作为文件名
+//                String key = fileName;
+                    log.info("backBlazeKeyId:{},backBlazeKey:{},backBlazeBucket:{},backBlazeDomain:{}", backBlazeKeyId, backBlazeKey, backBlazeBucket, backBlazeDomain);
+//                    B2ContentSource source = B2ByteArrayContentSource.build(file.getBytes());
+                    B2ContentSource source = B2FileContentSource.build(diskFile);
+                    B2UploadFileRequest request = B2UploadFileRequest
+                            .builder(backBlazeBucket, finalFileName, B2ContentTypes.B2_AUTO, source)
+                            .setCustomField("color", "blue")
+                            .build();
 //            B2FileVersion b2FileVersion = uploadManager.uploadSmallFile(request);
-            B2FileVersion b2FileVersion = uploadManager.uploadLargeFile(request, executorService);
-            log.info("url:{}", backBlazeDomain + "/" + fileName);
-            //response.bodyString(): {"hash":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH","key":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH"}
-            return backBlazeDomain + "/" + fileName;
-        } catch (IOException | B2Exception e) {
-            log.error(e.getMessage());
-            return null;
+                    B2FileVersion b2FileVersion = uploadManager.uploadSmallFile(request);
+                    diskFile.deleteOnExit();
+                } catch (B2Exception e) {
+                    log.error(e.getMessage());
+                }
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
+        log.info("url:{}", backBlazeDomain + "/" + fileName);
+        //response.bodyString(): {"hash":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH","key":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH"}
+        return backBlazeDomain + "/" + fileName;
     }
 
 
