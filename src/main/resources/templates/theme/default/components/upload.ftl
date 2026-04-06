@@ -51,6 +51,20 @@
     }
 
     uploadImageFileEle.addEventListener("change", function () {
+        var maxSizeMB = ${maxSize!500};
+        var maxSize = maxSizeMB * 1024 * 1024;
+
+        for (var i = 0; i < uploadImageFileEle.files.length; i++) {
+
+            var file = uploadImageFileEle.files[i];
+
+            if (file.size > maxSize) {
+                err("文件不能超过 " + maxSizeMB + "MB");
+                uploadImageFileEle.value = "";
+                return;
+            }
+
+        }
         $(".upload-progress-div").removeClass("d-none");
         uploadProgress.css("top", clientHeight * .4 + "px");
         // var _m = layer.msg('上传中(' + upload_progress + '%)...', {icon: 16, shade: 0.5, time: -1});
@@ -64,8 +78,14 @@
 
         var xhr = new XMLHttpRequest();
         xhr.responseType = "json";
+        //OSS直连改造
+
+
         xhr.open('POST', '/api/upload');
         xhr.setRequestHeader("token", "${_user.token!}");
+
+
+
         xhr.onload = function () {
             var data = xhr.response;
             if (data.errno !== 0) {

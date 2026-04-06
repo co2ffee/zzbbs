@@ -96,7 +96,8 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.47.0/codemirror.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.47.0/mode/markdown/markdown.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.47.0/addon/display/placeholder.min.js"></script>
-        <textarea name="content" id="content" class="form-control" placeholder="内容，支持Markdown语法">${_content!?html}</textarea>
+        <textarea name="content" id="content" class="form-control"
+                  placeholder="内容，支持Markdown语法">${_content!?html}</textarea>
         <script type="text/javascript">
             CodeMirror.keyMap.default["Shift-Tab"] = "indentLess";
             CodeMirror.keyMap.default["Tab"] = "indentMore";
@@ -118,6 +119,21 @@
             }
 
             uploadImageFileEle.addEventListener("change", function () {
+                var maxSizeMB = ${maxSize!500};
+                var maxSize = maxSizeMB * 1024 * 1024;
+
+                for (var i = 0; i < uploadImageFileEle.files.length; i++) {
+
+                    var file = uploadImageFileEle.files[i];
+
+                    if (file.size > maxSize) {
+                        err("文件不能超过 " + maxSizeMB + "MB");
+                        uploadImageFileEle.value = "";
+                        return;
+                    }
+
+                }
+
                 uploadImageWithProgress(uploadImageFileEle.files, function (data) {
                     var oldContent = window.editor.getDoc().getValue();
                     // if (oldContent) oldContent += '\n\n';

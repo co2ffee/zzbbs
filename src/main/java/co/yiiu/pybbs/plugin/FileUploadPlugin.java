@@ -18,30 +18,32 @@ import org.springframework.web.multipart.MultipartFile;
 @Aspect
 public class FileUploadPlugin {
 
-    private final Logger log = LoggerFactory.getLogger(FileUploadPlugin.class);
-    @Resource
-    private ISystemConfigService systemConfigService;
-    @Resource
-    private FileUtil fileUtil;
+	private final Logger log = LoggerFactory.getLogger(FileUploadPlugin.class);
+	@Resource
+	private ISystemConfigService systemConfigService;
+	@Resource
+	private FileUtil fileUtil;
 
-    @Around("co.yiiu.pybbs.hook.FileUtilHook.upload()")
-    public Object upload(ProceedingJoinPoint proceedingJoinPoint) throws Throwable {
-        String cloudStoragePlatform = systemConfigService.selectAllConfig().get("cloud_storage_platform");
-        log.info("fileUtilHook.upload: {}", cloudStoragePlatform);
-        Object[] args = proceedingJoinPoint.getArgs();
-        if (StringUtils.isEmpty(cloudStoragePlatform) || UploadPlatForm.LOCAL.name().equals(cloudStoragePlatform)) {
-            return proceedingJoinPoint.proceed(args);
-        } else if (UploadPlatForm.QINIU.name().equals(cloudStoragePlatform)) {
-            return fileUtil.qiniuUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
-        } else if (UploadPlatForm.OSS.name().equals(cloudStoragePlatform)) {
-            return fileUtil.ossUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
-        } else if (UploadPlatForm.BACKBLAZE.name().equals(cloudStoragePlatform)) {
-            return fileUtil.backBlazeUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
-        }
-        return null;
-    }
+	@Around("co.yiiu.pybbs.hook.FileUtilHook.upload()")
+	public Object upload(ProceedingJoinPoint proceedingJoinPoint) throws Throwable {
+		String cloudStoragePlatform = systemConfigService.selectAllConfig().get("cloud_storage_platform");
+		log.info("fileUtilHook.upload: {}", cloudStoragePlatform);
+		Object[] args = proceedingJoinPoint.getArgs();
+		if (StringUtils.isEmpty(cloudStoragePlatform) || UploadPlatForm.LOCAL.name().equals(cloudStoragePlatform)) {
+			return proceedingJoinPoint.proceed(args);
+		} else if (UploadPlatForm.QINIU.name().equals(cloudStoragePlatform)) {
+			return fileUtil.qiniuUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
+		} else if (UploadPlatForm.OSS.name().equals(cloudStoragePlatform)) {
+			return fileUtil.ossUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
+		} else if (UploadPlatForm.BACKBLAZE.name().equals(cloudStoragePlatform)) {
+			return fileUtil.backBlazeUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
+		} else if (UploadPlatForm.TEBI.name().equals(cloudStoragePlatform)) {
+			return fileUtil.tebiUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
+		}
+		return null;
+	}
 
-    enum UploadPlatForm {
-        LOCAL, QINIU, OSS, BACKBLAZE
-    }
+	enum UploadPlatForm {
+		LOCAL, QINIU, OSS, BACKBLAZE, TEBI
+	}
 }
