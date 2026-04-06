@@ -1,5 +1,8 @@
 package co.yiiu.pybbs.config;
 
+import co.yiiu.pybbs.interceptor.CommonInterceptor;
+import co.yiiu.pybbs.interceptor.UserInterceptor;
+
 import java.util.Locale;
 
 import javax.annotation.Resource;
@@ -12,9 +15,6 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupport;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
-
-import co.yiiu.pybbs.interceptor.CommonInterceptor;
-import co.yiiu.pybbs.interceptor.UserInterceptor;
 
 /**
  * Created by tomoya.
@@ -41,7 +41,7 @@ public class WebMvcConfig extends WebMvcConfigurationSupport {
         registry.addInterceptor(commonInterceptor).addPathPatterns("/**");
         // 用户拦截器，拦截用户是否登录
         registry.addInterceptor(userInterceptor).addPathPatterns("/settings", "/settings/*", "/topic/create", "/*", "/topic/*")
-                .excludePathPatterns("/login", "/register");
+                .excludePathPatterns("/login", "/register", "/adminlogin");
     }
 
     @Override

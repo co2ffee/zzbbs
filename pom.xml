@@ -228,6 +228,11 @@
             <artifactId>b2-sdk-httpclient</artifactId>
             <version>6.1.1</version>
         </dependency>
+        <dependency>
+            <groupId>com.volcengine</groupId>
+            <artifactId>volcengine-java-sdk-ark-runtime</artifactId>
+            <version>LATEST</version>
+        </dependency>
     </dependencies>
 
     <build>
