@@ -35,7 +35,7 @@
                         if (type === "topic") {
                             insertContent += "![image](" + url + ")\n\n"
                         } else if (type === "video") {
-                            insertContent += "<video class='embed-responsive embed-responsive-16by9' controls><source src='" + url + "' type='video/mp4'></video>\n\n";
+                            insertContent += "<div class='embed-responsive embed-responsive-16by9'><video class='embed-responsive-item' controls><source src='" + url + "' type='video/mp4'></video></div>\n\n";
                         }
                     }
                     content.val(text + insertContent);

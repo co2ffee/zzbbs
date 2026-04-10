@@ -139,7 +139,7 @@
                     if (type.value === "topic") {
                         insertContent = "![image](" + url + ")\n\n";
                     } else if (type.value === "video") {
-                        insertContent = "<video class='embed-responsive embed-responsive-16by9' controls><source src='" + url + "' type='video/mp4'></video>\n\n";
+                        insertContent = "<div class='embed-responsive embed-responsive-16by9'><video class='embed-responsive-item' controls><source src='" + url + "' type='video/mp4'></video></div>\n\n";
                     }
                     window.editor.getDoc().setValue(oldContent + insertContent);
                     window.editor.focus();

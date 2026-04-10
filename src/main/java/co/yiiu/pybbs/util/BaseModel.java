@@ -76,23 +76,29 @@ public class BaseModel {
         }
         content = MarkdownUtil.render(content);
         // 解析内容里的视频链接
-        content = Jsoup.clean(content, Whitelist.relaxed().addTags("code", "pre", "video", "source")
+        content = Jsoup.clean(content, Whitelist.relaxed().addTags("code", "pre", "video", "source", "iframe")
                 .addAttributes("code", "class")
-                .addAttributes("video", "class", "controls")
+                .addAttributes("video", "class", "controls", "src")
                 .addAttributes("source", "src", "type")
+                .addAttributes("iframe", "src", "width", "height", "frameborder", "allowfullscreen", "class")
+                .addProtocols("video", "src", "http", "https", "ftp", "data")
+                .addProtocols("source", "src", "http", "https", "ftp", "data")
+                .addProtocols("iframe", "src", "http", "https")
         );
-        Document parse = Jsoup.parse(content, "", Parser.xmlParser());
+        Document parse = Jsoup.parse(content, "", Parser.htmlParser());
         Elements tableElements = parse.select("table");
         tableElements.forEach(element -> element.addClass("table table-bordered"));
-        // 给video标签的父元素添加embed-responsive类，让Bootstrap正确撑开高度
+        // 给video标签包裹容器，确保Bootstrap正确撑开高度
         Elements videoElements = parse.select("video");
         videoElements.forEach(element -> {
+            // 清理视频标签上可能存在的错误类名（防止样式冲突）
+            element.removeClass("embed-responsive");
+            element.removeClass("embed-responsive-16by9");
             element.addClass("embed-responsive-item");
             element.attr("width", "100%");
             element.attr("height", "100%");
-            if (element.parent() != null) {
-                element.parent().addClass("embed-responsive embed-responsive-16by9");
-            }
+            // 总是包裹在一个专用的 div 容器中
+            element.wrap("<div class=\"embed-responsive embed-responsive-16by9\"></div>");
         });
         Elements aElements = parse.select("p");
         if (!aElements.isEmpty()) {
@@ -135,7 +141,7 @@ public class BaseModel {
                 }
             });
         }
-        return parse.outerHtml();
+        return parse.body().html();
     }
 
     // 将用户点赞的id从字符串转成集合
