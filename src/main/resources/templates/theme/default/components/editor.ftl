@@ -38,70 +38,48 @@
         }
     </style>
     <div class="upload-progress-div d-none">
-        <div class="upload-progress">100%</div>
+        <div class="upload-progress">0%</div>
         <div class="upload-progress-fade"></div>
     </div>
     <script type="text/javascript">
-        async function getUploadUrl(file, type, token) {
-            const fd = new FormData();
-            fd.append("file", file);
-            fd.append("type", type);
-
+        async function getUploadUrl(type, token) {
             const res = await fetch("/api/getUploadUrl", {
                 method: "POST",
                 headers: {
-                    "token": token   // 加上 token
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "token": token
                 },
-                body: fd
+                body: "type=" + encodeURIComponent(type)
             });
-
             return res.json();
         }
 
-        async function uploadImageWithProgress(files, cb) {
-            var clientHeight = document.documentElement.clientHeight;
-            var uploadProgress = $(".upload-progress");
-
-            $(".upload-progress-div").removeClass("d-none");
-            uploadProgress.css("top", clientHeight * .4 + "px");
-            // var _m = layer.msg('上传中(' + upload_progress + '%)...', {icon: 16, shade: 0.5, time: -1});
-            var type = $("#type").val();
-            //原逻辑
-            // var fd = new FormData();
-            //新
+        async function uploadImageWithProgress(files, type, cb) {
             var file = files[0];
-            var type = document.getElementById("type").value;
-            // for (var i = 0; i < files.length; i++) {
-            //     fd.append("file", files[i]);
-            // }
-            // fd.append("type", type);
 
-            // 获取 presigned URL
-            let data = await getUploadUrl(file, type, "${_user.token!}");
-            console.log(data);
+            var data = await getUploadUrl(type, "${_user.token!}");
             if (data.code !== 200) {
                 throw new Error("获取上传地址失败");
             }
-            console.log(data);
-            // 如果后端返回的是字符串
-            let tdata = data.detail.urls[0];
-            if (typeof data.detail.urls[0] === "string") {
-                tdata = JSON.parse(data.detail.urls[0]);
-            }
-            console.log(tdata);
-            const uploadUrl = tdata.uploadUrl;
-            const fileUrl = tdata.fileUrl;
 
-            //OSS直连改造
-            const xhr = new XMLHttpRequest();
-            xhr.open("PUT", uploadUrl);
+            var tdata = data.detail.urls[0];
+            if (typeof tdata === "string") {
+                tdata = JSON.parse(tdata);
+            }
+
+            var clientHeight = document.documentElement.clientHeight;
+            var uploadProgress = $(".upload-progress");
+            $(".upload-progress-div").removeClass("d-none");
+            uploadProgress.css("top", clientHeight * .4 + "px");
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("PUT", tdata.uploadUrl);
             xhr.setRequestHeader("Content-Type", file.type);
 
             xhr.onload = function () {
-                cb({fileUrl: fileUrl});
+                cb({fileUrl: tdata.fileUrl});
             };
 
-            // 获取上传进度
             xhr.upload.onprogress = function (event) {
                 if (event.lengthComputable) {
                     var percent = event.loaded / event.total * 100;
@@ -126,12 +104,12 @@
             CodeMirror.keyMap.default["Shift-Tab"] = "indentLess";
             CodeMirror.keyMap.default["Tab"] = "indentMore";
             window.editor = CodeMirror.fromTextArea(document.getElementById("content"), {
-                lineNumbers: true,     // 显示行数
-                indentUnit: 4,         // 缩进单位为4
+                lineNumbers: true,
+                indentUnit: 4,
                 tabSize: 4,
-                matchBrackets: true,   // 括号匹配
-                mode: 'markdown',     // Markdown模式
-                lineWrapping: true,    // 自动换行
+                matchBrackets: true,
+                mode: 'markdown',
+                lineWrapping: true,
             });
             window.editor.setSize('auto', '450px');
             var uploadImageFileEle = document.getElementById("uploadImageFileEle");
@@ -147,30 +125,24 @@
                 var maxSize = maxSizeMB * 1024 * 1024;
 
                 for (var i = 0; i < uploadImageFileEle.files.length; i++) {
-
-                    var file = uploadImageFileEle.files[i];
-
-                    if (file.size > maxSize) {
+                    if (uploadImageFileEle.files[i].size > maxSize) {
                         err("文件不能超过 " + maxSizeMB + "MB");
                         uploadImageFileEle.value = "";
                         return;
                     }
-
                 }
 
-                uploadImageWithProgress(uploadImageFileEle.files, function (data) {
+                uploadImageWithProgress(uploadImageFileEle.files, type.value, function (data) {
                     var oldContent = window.editor.getDoc().getValue();
-                    // if (oldContent) oldContent += '\n\n';
                     var insertContent = "";
                     var url = data.fileUrl;
                     if (type.value === "topic") {
-                        insertContent += "![image](" + url + ")\n\n"
+                        insertContent = "![image](" + url + ")\n\n";
                     } else if (type.value === "video") {
-                        insertContent += "<video class='embed-responsive embed-responsive-16by9' controls><source src='" + url + "' type='video/mp4'></video>\n\n";
+                        insertContent = "<video class='embed-responsive embed-responsive-16by9' controls><source src='" + url + "' type='video/mp4'></video>\n\n";
                     }
                     window.editor.getDoc().setValue(oldContent + insertContent);
                     window.editor.focus();
-                    //定位到文档的最后一个字符的位置
                     window.editor.setCursor(window.editor.lineCount(), 0);
                     uploadImageFileEle.value = "";
                 });
@@ -186,15 +158,9 @@
             window._E = new E(document.getElementById("content"));
             window._E.create();
             window._E.config.height = 500;
-            // editor.config.uploadImgServer = '/api/upload';
-            // editor.config.uploadFileName = 'file';
             window._E.config.customUploadImg = function (resultFiles, insertImgFn) {
-                // resultFiles 是 input 中选中的文件列表
-                // insertImgFn 是获取图片 url 后，插入到编辑器的方法
-                uploadImageWithProgress(resultFiles, function (data) {
-                    var url = data.fileUrl;
-                    // 上传图片，返回结果，将图片插入到编辑器中
-                    insertImgFn(url);
+                uploadImageWithProgress(resultFiles, "topic", function (data) {
+                    insertImgFn(data.fileUrl);
                 });
             }
         </script>

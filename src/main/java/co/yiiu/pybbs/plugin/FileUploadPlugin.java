@@ -36,9 +36,7 @@ public class FileUploadPlugin {
 		} else if (UploadPlatForm.OSS.name().equals(cloudStoragePlatform)) {
 			return fileUtil.ossUpload((MultipartFile) args[0], null, (String) args[2]);
 		} else if (UploadPlatForm.BACKBLAZE.name().equals(cloudStoragePlatform)) {
-			//mock
 			return fileUtil.awsBlazeUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
-//			return fileUtil.backBlazeUpload((MultipartFile) args[0], null, (String) args[2]);
 		} else if (UploadPlatForm.AWS.name().equals(cloudStoragePlatform)) {
 			return fileUtil.awsBlazeUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
 		}

@@ -175,35 +175,38 @@
             $("#selectAvatar").click(function () {
                 $("#file").click();
             });
-            $("#file").change(function () {
-                var fd = new FormData();
-                fd.append("file", document.getElementById("file").files[0]);
-                fd.append("type", "avatar");
-                fd.append("token", "${_user.token!}");
-                $.post({
-                    url: "/api/upload",
-                    data: fd,
-                    dataType: 'json',
+            $("#file").change(async function () {
+                var file = document.getElementById("file").files[0];
+
+                var res = await fetch("/api/getUploadUrl", {
+                    method: "POST",
                     headers: {
-                        'token': '${_user.token!}'
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "token": "${_user.token!}"
                     },
-                    processData: false,
-                    contentType: false,
-                    success: function (data) {
-                        if (data.code === 200) {
-                            if (data.detail.errors.length === 0) {
-                                suc("修改头像成功");
-                                $.each($(".avatar "), function (i, v) {
-                                    $(v).attr("src", data.detail.urls[0]);
-                                })
-                            } else {
-                                err(data.detail.errors[0]);
-                            }
-                        } else {
-                            err(data.description);
-                        }
-                    }
-                })
+                    body: "type=avatar"
+                });
+                var data = await res.json();
+                if (data.code !== 200) {
+                    err("获取上传地址失败");
+                    return;
+                }
+
+                var tdata = data.detail.urls[0];
+                if (typeof tdata === "string") {
+                    tdata = JSON.parse(tdata);
+                }
+
+                var xhr = new XMLHttpRequest();
+                xhr.open("PUT", tdata.uploadUrl);
+                xhr.setRequestHeader("Content-Type", file.type);
+                xhr.onload = function () {
+                    suc("修改头像成功");
+                    $.each($(".avatar"), function (i, v) {
+                        $(v).attr("src", tdata.fileUrl);
+                    });
+                };
+                xhr.send(file);
             });
 
             // 发送激活邮件

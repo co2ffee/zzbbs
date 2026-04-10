@@ -50,112 +50,74 @@
         uploadImageFileEle.click();
     }
 
-        async function getUploadUrl(file, type, token) {
-            const fd = new FormData();
-            fd.append("file", file);
-            fd.append("type", type);
-
-            const res = await fetch("/api/getUploadUrl", {
-                method: "POST",
-                headers: {
-                    "token": token   // 加上 token
-                },
-                body: fd
-            });
-
-            return res.json();
-        }
+    async function getUploadUrl(type, token) {
+        const res = await fetch("/api/getUploadUrl", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "token": token
+            },
+            body: "type=" + encodeURIComponent(type)
+        });
+        return res.json();
+    }
 
     uploadImageFileEle.addEventListener("change", async function () {
-        var maxSizeMB = $
-        {
-            maxSize
-            !500
-        }
-        ;
+        var maxSizeMB = ${maxSize!500};
         var maxSize = maxSizeMB * 1024 * 1024;
 
         for (var i = 0; i < uploadImageFileEle.files.length; i++) {
-
-            var file = uploadImageFileEle.files[i];
-
-            if (file.size > maxSize) {
+            if (uploadImageFileEle.files[i].size > maxSize) {
                 err("文件不能超过 " + maxSizeMB + "MB");
                 uploadImageFileEle.value = "";
                 return;
             }
-
         }
-        $(".upload-progress-div").removeClass("d-none");
-        uploadProgress.css("top", clientHeight * .4 + "px");
 
         var type = $("#type").val();
-        var ele = $(this)[0];
-        //原逻辑
-        // var fd = new FormData();
-        //新
-        var fd = ele.files[0];
-        var file = ele.files[0];
+        var file = uploadImageFileEle.files[0];
 
-        // 获取 presigned URL
-        let data = await getUploadUrl(file, type, "${_user.token!}");
-        console.log(data);
+        var data = await getUploadUrl(type, "${_user.token!}");
         if (data.code !== 200) {
             throw new Error("获取上传地址失败");
         }
-        console.log(data);
-        // 如果后端返回的是字符串
-        let tdata = data.detail.urls[0];
-        if (typeof data.detail.urls[0] === "string") {
-            tdata = JSON.parse(data.detail.urls[0]);
-        }
-        const uploadUrl = tdata.uploadUrl;
-        const fileUrl = tdata.fileUrl;
 
-        //OSS直连改造
-        const xhr = new XMLHttpRequest();
-        xhr.open("PUT", uploadUrl);
+        var tdata = data.detail.urls[0];
+        if (typeof tdata === "string") {
+            tdata = JSON.parse(tdata);
+        }
+
+        $(".upload-progress-div").removeClass("d-none");
+        uploadProgress.style.top = clientHeight * .4 + "px";
+
+        var xhr = new XMLHttpRequest();
+        xhr.open("PUT", tdata.uploadUrl);
         xhr.setRequestHeader("Content-Type", file.type);
 
         xhr.onload = function () {
-            var data = xhr.response;
-            console.log(data);
-            // if (data.errno !== 0) {
-            //     suc("上传成功");
-            // } else {
-            //     var error = "";
-            //     for (var k = 0; k < data.errors.length; k++) {
-            //         error += data.errors[k] + "<br/>";
-            //     }
-            //     err(error);
-            // }
             var oldContent = window.editor.getDoc().getValue();
             var insertContent = "";
             if (type === "topic") {
-                insertContent += "![image](" + fileUrl + ")\n\n"
+                insertContent = "![image](" + tdata.fileUrl + ")\n\n";
             } else if (type === "video") {
-                insertContent += "<video class='embed-responsive embed-responsive-16by9' controls><source src='" + fileUrl + "' type='video/mp4'></video>\n\n";
+                insertContent = "<video class='embed-responsive embed-responsive-16by9' controls><source src='" + tdata.fileUrl + "' type='video/mp4'></video>\n\n";
             }
-
             window.editor.getDoc().setValue(oldContent + insertContent);
             window.editor.focus();
-            //定位到文档的最后一个字符的位置
             window.editor.setCursor(window.editor.lineCount(), 0);
             document.getElementById("uploadImageForm").reset();
         };
 
-
-        // 获取上传进度
         xhr.upload.onprogress = function (event) {
             if (event.lengthComputable) {
                 var percent = event.loaded / event.total * 100;
-                uploadProgress.text("正在上传(" + percent.toFixed(2) + "%)...");
+                uploadProgress.textContent = "正在上传(" + percent.toFixed(2) + "%)...";
                 if (percent === 100) {
                     $(".upload-progress-div").addClass("d-none");
                     $(".upload-progress").text("");
                 }
             }
         };
-        xhr.send(fd);
-    })
+        xhr.send(file);
+    });
 </script>
