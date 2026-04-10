@@ -38,11 +38,11 @@
                                     <#--<input type="hidden" name="key" value="${system.key}" class="form-control"/>-->
                                     <#if system.type == "email">
                                         <input type="email" id="${system.key!}" name="${system.key!}"
-                                               value="${system.value!}"
+                                               value="${system.value!?html}"
                                                class="form-control"/>
                                     <#elseif system.type == "text">
                                         <input type="text" id="${system.key!}" name="${system.key!}"
-                                               value="${system.value!}"
+                                               value="${system.value!?html}"
                                                class="form-control"/>
                                     <#elseif system.type == "password">
                                         <input type="password" id="${system.key!}" name="${system.key!}"
@@ -50,11 +50,11 @@
                                                class="form-control"/>
                                     <#elseif system.type == "url">
                                         <input type="url" id="${system.key!}" name="${system.key!}"
-                                               value="${system.value!}"
+                                               value="${system.value!?html}"
                                                class="form-control"/>
                                     <#elseif system.type == "number">
                                         <input type="number" id="${system.key!}" name="${system.key!}"
-                                               value="${system.value!}"
+                                               value="${system.value!?html}"
                                                class="form-control"/>
                                     <#elseif system.type == "radio">
                                         <input type="radio" id="${system.key!}1" name="${system.key!}"
@@ -67,7 +67,7 @@
                                         <select id="${system.key!}" name="${system.key!}" class="form-control">
                                             <#list system.option?split(',') as opt>
                                                 <option <#if system.value == opt>selected</#if>
-                                                        value="${opt}">${opt}</option>
+                                                        value="${opt?html}">${opt?html}</option>
                                             </#list>
                                         </select>
                                     </#if>
