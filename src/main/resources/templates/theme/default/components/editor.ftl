@@ -42,41 +42,65 @@
         <div class="upload-progress-fade"></div>
     </div>
     <script type="text/javascript">
-        function uploadImageWithProgress(files, cb) {
+        async function getUploadUrl(file, type, token) {
+            const fd = new FormData();
+            fd.append("file", file);
+            fd.append("type", type);
+
+            const res = await fetch("/api/getUploadUrl", {
+                method: "POST",
+                headers: {
+                    "token": token   // 加上 token
+                },
+                body: fd
+            });
+
+            return res.json();
+        }
+
+        async function uploadImageWithProgress(files, cb) {
             var clientHeight = document.documentElement.clientHeight;
             var uploadProgress = $(".upload-progress");
 
             $(".upload-progress-div").removeClass("d-none");
             uploadProgress.css("top", clientHeight * .4 + "px");
             // var _m = layer.msg('上传中(' + upload_progress + '%)...', {icon: 16, shade: 0.5, time: -1});
-            var fd = new FormData();
+            var type = $("#type").val();
+            //原逻辑
+            // var fd = new FormData();
+            //新
+            var file = files[0];
             var type = document.getElementById("type").value;
-            for (var i = 0; i < files.length; i++) {
-                fd.append("file", files[i]);
-            }
-            fd.append("type", type);
+            // for (var i = 0; i < files.length; i++) {
+            //     fd.append("file", files[i]);
+            // }
+            // fd.append("type", type);
 
-            var xhr = new XMLHttpRequest();
-            xhr.responseType = "json";
-            xhr.open('POST', '/api/upload');
-            xhr.setRequestHeader("token", "${_user.token!}");
+            // 获取 presigned URL
+            let data = await getUploadUrl(file, type, "${_user.token!}");
+            console.log(data);
+            if (data.code !== 200) {
+                throw new Error("获取上传地址失败");
+            }
+            console.log(data);
+            // 如果后端返回的是字符串
+            let tdata = data.detail.urls[0];
+            if (typeof data.detail.urls[0] === "string") {
+                tdata = JSON.parse(data.detail.urls[0]);
+            }
+            console.log(tdata);
+            const uploadUrl = tdata.uploadUrl;
+            const fileUrl = tdata.fileUrl;
+
+            //OSS直连改造
+            const xhr = new XMLHttpRequest();
+            xhr.open("PUT", uploadUrl);
+            xhr.setRequestHeader("Content-Type", file.type);
+
             xhr.onload = function () {
-                var data = xhr.response;
-                if (data.code === 200) {
-                    suc("上传成功");
-                    cb(data);
-                } else {
-                    if (!data.detail) {
-                        err(data.description)
-                    } else {
-                        var error = "";
-                        for (var k = 0; k < data.detail.errors.length; k++) {
-                            error += data.detail.errors[k] + "<br/>";
-                        }
-                        err(error);
-                    }
-                }
+                cb({fileUrl: fileUrl});
             };
+
             // 获取上传进度
             xhr.upload.onprogress = function (event) {
                 if (event.lengthComputable) {
@@ -88,7 +112,7 @@
                     }
                 }
             };
-            xhr.send(fd);
+            xhr.send(file);
         }
     </script>
     <#if style=="MD">
@@ -138,13 +162,11 @@
                     var oldContent = window.editor.getDoc().getValue();
                     // if (oldContent) oldContent += '\n\n';
                     var insertContent = "";
-                    for (var j = 0; j < data.detail.urls.length; j++) {
-                        var url = data.detail.urls[j];
-                        if (type.value === "topic") {
-                            insertContent += "![image](" + url + ")\n\n"
-                        } else if (type.value === "video") {
-                            insertContent += "<video class='embed-responsive embed-responsive-16by9' controls><source src='" + url + "' type='video/mp4'></video>\n\n";
-                        }
+                    var url = data.fileUrl;
+                    if (type.value === "topic") {
+                        insertContent += "![image](" + url + ")\n\n"
+                    } else if (type.value === "video") {
+                        insertContent += "<video class='embed-responsive embed-responsive-16by9' controls><source src='" + url + "' type='video/mp4'></video>\n\n";
                     }
                     window.editor.getDoc().setValue(oldContent + insertContent);
                     window.editor.focus();
@@ -170,11 +192,9 @@
                 // resultFiles 是 input 中选中的文件列表
                 // insertImgFn 是获取图片 url 后，插入到编辑器的方法
                 uploadImageWithProgress(resultFiles, function (data) {
-                    for (var j = 0; j < data.detail.urls.length; j++) {
-                        var url = data.detail.urls[j];
-                        // 上传图片，返回结果，将图片插入到编辑器中
-                        insertImgFn(url);
-                    }
+                    var url = data.fileUrl;
+                    // 上传图片，返回结果，将图片插入到编辑器中
+                    insertImgFn(url);
                 });
             }
         </script>

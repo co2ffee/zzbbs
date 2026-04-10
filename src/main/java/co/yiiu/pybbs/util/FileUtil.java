@@ -6,11 +6,16 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.net.URI;
 import java.net.URL;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
 import org.slf4j.Logger;
@@ -20,6 +25,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.alibaba.fastjson.JSON;
 import com.aliyun.oss.OSSClient;
 import com.aliyun.oss.model.GeneratePresignedUrlRequest;
 import com.backblaze.b2.client.B2StorageClient;
@@ -32,22 +38,19 @@ import com.backblaze.b2.client.structures.B2FileVersion;
 import com.backblaze.b2.client.structures.B2UploadFileRequest;
 import com.qiniu.http.Response;
 import com.qiniu.storage.Configuration;
-import com.qiniu.storage.Region;
 import com.qiniu.storage.UploadManager;
 import com.qiniu.util.Auth;
 
+import co.yiiu.pybbs.model.User;
 import co.yiiu.pybbs.service.ISystemConfigService;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import software.amazon.awssdk.regions.Region;
 
 /**
  * Created by tomoya.
@@ -93,17 +96,17 @@ public class FileUtil {
 	 * 上传文件
 	 *
 	 * @param file       要上传的文件对象
-	 * @param fileName   文件名，可以为空，为空的话，就生成一串uuid代替文件名
+	 * @param fileType   文件类型
 	 * @param customPath 自定义存放路径，这个地址是跟在数据库里配置的路径后面的，
 	 *                   格式类似 avatar/admin 前后没有 / 前面表示头像，后面是用户的昵称，举例，如果将用户头像全都放在一个文件夹里，这里可以直接传个 avatar
 	 * @return
 	 */
-	public String upload(MultipartFile file, String fileName, String customPath) {
+	public String upload(MultipartFile file, String fileType, String customPath) {
 		log.info("upload");
 		try {
 			if (file == null || file.isEmpty()) return null;
 
-			if (StringUtils.isEmpty(fileName)) fileName = StringUtil.uuid();
+			String fileName = StringUtil.uuid();
 			String suffix = "." + Objects.requireNonNull(file.getContentType()).split("/")[1];
 			// 如果存放目录不存在，则创建
 			File savePath = new File(systemConfigService.selectAllConfig().get("upload_path").toString() + customPath);
@@ -177,7 +180,7 @@ public class FileUtil {
 			if (StringUtils.isEmpty(fileName)) fileName = StringUtil.uuid();
 			String suffix = "." + Objects.requireNonNull(file.getContentType()).split("/")[1];
 			fileName += suffix;
-			Configuration cfg = new Configuration(Region.autoRegion());
+			Configuration cfg = new Configuration();
 			UploadManager uploadManager = new UploadManager(cfg);
 			Auth auth = Auth.create(qiniuKey, qiniuSecret);
 			//默认不指定key的情况下，以文件内容的hash值作为文件名
@@ -240,122 +243,116 @@ public class FileUtil {
 		return backBlazeDomain + "/" + fileName;
 	}
 
-	public String tebiUpload(MultipartFile file, String fileName, String customPath) {
+	public String awsBlazeUpload(MultipartFile file, String fileType, String customPath) {
 		String backBlazeKeyId = systemConfigService.selectAllConfig().get("backblaze_keyid");
 		String backBlazeKey = systemConfigService.selectAllConfig().get("backblaze_key");
 		String backBlazeBucket = systemConfigService.selectAllConfig().get("backblaze_bucket");
+		String backBlazeBucketName = "dljblob";
 		String backBlazeDomain = systemConfigService.selectAllConfig().get("backblaze_domain");
-		if (StringUtils.isEmpty(fileName)) fileName = StringUtil.uuid();
-		String suffix = "." + Objects.requireNonNull(file.getContentType()).split("/")[1];
-		fileName += suffix;
-		File diskFile = new File(System.getProperty("user.dir") + File.separator + fileName);
-		try {
-			file.transferTo(diskFile);
-
-			//异步操作
-			String finalFileName = fileName;
-			executorService.execute(() -> {
-				try (B2StorageClient uploadManager = B2StorageClientFactory
-						.createDefaultFactory()
-						.create(backBlazeKeyId, backBlazeKey, "b2_4j/0.0.1")) {
-					//默认不指定key的情况下，以文件内容的hash值作为文件名
-//                String key = fileName;
-					log.info("backBlazeKeyId:{},backBlazeKey:{},backBlazeBucket:{},backBlazeDomain:{}", backBlazeKeyId, backBlazeKey, backBlazeBucket, backBlazeDomain);
-//                    B2ContentSource source = B2ByteArrayContentSource.build(file.getBytes());
-					B2ContentSource source = B2FileContentSource.build(diskFile);
-					B2UploadFileRequest request = B2UploadFileRequest
-							.builder(backBlazeBucket, finalFileName, B2ContentTypes.B2_AUTO, source)
-							.setCustomField("color", "blue")
-							.build();
-//            B2FileVersion b2FileVersion = uploadManager.uploadSmallFile(request);
-					B2FileVersion b2FileVersion = uploadManager.uploadSmallFile(request);
-					log.info("finalFileName finish:{}", finalFileName);
-					if (!diskFile.delete()) {
-						log.info("file delete fail:{}", finalFileName);
-					}
-				} catch (B2Exception e) {
-					log.error(e.getMessage());
-				}
-			});
-		} catch (IOException e) {
-			throw new RuntimeException(e);
+		String fileName = StringUtil.uuid();
+		if (fileType.equalsIgnoreCase("avatar")) { // 上传头像
+			String suffix = ".jpeg";
+			fileName += suffix;
+		} else if (fileType.equalsIgnoreCase("topic")) { // 发帖上传图片
+			String suffix = ".jpeg";
+			fileName += suffix;
+		} else if (fileType.equalsIgnoreCase("video")) { // 视频上传
+			String suffix = ".mp4";
+			fileName += suffix;
+		} else {
+			log.error("上传类型不在处理范围内");
 		}
-		log.info("url:{}", backBlazeDomain + "/" + fileName);
-		//response.bodyString(): {"hash":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH","key":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH"}
-		return backBlazeDomain + "/" + fileName;
+
+		String endpoint = "https://s3.us-east-005.backblazeb2.com";
+
+		Region region = Region.of("us-east-1");
+
+		PresignedPutObjectRequest presigned;
+		try (S3Presigner presigner = S3Presigner.builder()
+				.endpointOverride(URI.create(endpoint))
+				.region(region)
+				.credentialsProvider(
+						StaticCredentialsProvider.create(
+								AwsBasicCredentials.create(
+										backBlazeKeyId,
+										backBlazeKey
+								)
+						)
+				)
+				.build()) {
+
+			PutObjectRequest objectRequest =
+					PutObjectRequest.builder()
+							.bucket(backBlazeBucketName)
+							.key(fileName)
+							.build();
+
+			PutObjectPresignRequest presignRequest =
+					PutObjectPresignRequest.builder()
+							.signatureDuration(Duration.ofMinutes(10))
+							.putObjectRequest(objectRequest)
+							.build();
+
+			presigned = presigner.presignPutObject(presignRequest);
+		}
+
+		Map<String, Object> result = new HashMap<>();
+
+		result.put("uploadUrl", presigned.url().toString());
+		result.put("fileUrl", backBlazeDomain + "/" + fileName);
+
+		log.info("uploadUrl:{}", presigned.url());
+		log.info("fileUrl:{}", backBlazeDomain + "/" + fileName);
+
+		return JSON.toJSONString(result);
 	}
 
 
 	public static void main(String[] args) {
-//        try {
-//            String qiniuKey = "JG0fmIMS7wS8wMMXh6wAllcPSYYBUa8y2YoKICUI";
-//            String qiniuSecret = "RhNP3k8TbitmJ7J1rZ-tO0NSAXjNr4YtjmbYiLJ8";
-//            String qiniuBucket = "vedio-dlj";
-//            String qiniuDomain = "/aaa";
-//            byte[] uploadBytes = "hello qiniu cloud".getBytes("utf-8");
-//            ByteArrayInputStream byteInputStream = new ByteArrayInputStream(uploadBytes);
-//            String fileName = "abc";
-//            if (StringUtils.isEmpty(fileName)) fileName = StringUtil.uuid();
-////            String suffix = "." + Objects.requireNonNull(file.getContentType()).split("/")[1];
-////            fileName += suffix;
-//            Configuration cfg = new Configuration(Region.autoRegion());
-//            UploadManager uploadManager = new UploadManager(cfg);
-//            Auth auth = Auth.create(qiniuKey, qiniuSecret);
-//            //默认不指定key的情况下，以文件内容的hash值作为文件名
-//            String key = fileName;
-//            String upToken = auth.uploadToken(qiniuBucket, key);
-//            Response response = uploadManager.put(byteInputStream, key, upToken, null, null);
-//            System.out.println(response);
-//            //response.bodyString(): {"hash":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH","key":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH"}
-//            System.out.printf("qiniuDomain + \"/\" + fileName");
-//        } catch (IOException e) {
-//
-//        }
-		String accessKey = "9Foifqf0vySr9lw1";
-		String secretKey = "nqW6gm3FiOukD6Fzu96X4UHyZcil3auJXlkGLawW";
-		String endpointUrl = "https://s3.tebi.io";
-		String region = "US";
-		String bucketName = "ali";
-		String bucketFilePath = "/ali";
-		String filePath = "E:\\迅雷下载\\iacg.love.txt";
+		String backBlazeKeyId = "00589e584a142a10000000002";
+		String backBlazeKey = "K0054CpWrw7cuHmcJ0DqbrxSrMlpOpk";
+		String backBlazeBucket = "dljblob";
+		String backBlazeDomain = "https://cdn.dljdlj.top";
+		String endpoint = "https://s3.us-east-005.backblazeb2.com";
+		String fileName = StringUtil.uuid();
+		String suffix = ".jpeg";
+		fileName += suffix;
 
-		BasicAWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
+		// 注意：Backblaze B2 S3兼容API在签名时使用的region必须是us-east-1，
+		// 而不是endpoint中的us-east-005，否则会导致签名不匹配
+		Region region = Region.of("us-east-1");
 
-		AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
-				.withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpointUrl, region))
-				.withCredentials(new AWSStaticCredentialsProvider(credentials))
-				.enablePathStyleAccess()
-				.build();
 
-		PutObjectRequest request = new PutObjectRequest(bucketName, bucketFilePath, new File(filePath));
-		request.setCannedAcl(CannedAccessControlList.PublicRead);
+		try (S3Presigner presigner = S3Presigner.builder()
+				.endpointOverride(URI.create(endpoint))
+				.region(region)
+				.credentialsProvider(
+						StaticCredentialsProvider.create(
+								AwsBasicCredentials.create(
+										backBlazeKeyId,
+										backBlazeKey
+								)
+						)
+				)
+				.build()) {
 
-		s3Client.putObject(request);
+			PutObjectRequest objectRequest = PutObjectRequest.builder()
+					.bucket(backBlazeBucket)
+					.key(fileName)
+					.build();
 
-		System.out.println("File uploaded successfully!");
+			PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
+					.signatureDuration(Duration.ofMinutes(10)) // The URL will expire in 10 minutes.
+					.putObjectRequest(objectRequest)
+					.build();
 
-		S3Object s3Object = s3Client.getObject(bucketName, bucketFilePath);
+			PresignedPutObjectRequest presignedRequest = presigner.presignPutObject(presignRequest);
+			String myURL = presignedRequest.url().toString();
+			System.out.println("Presigned URL to upload to: [{}]" + myURL);
+			System.out.println("Which HTTP method needs to be used when uploading: [{}]" +
+					presignedRequest.httpRequest().method());
 
-		S3ObjectInputStream objectInputStream = s3Object.getObjectContent();
-
-//// Save the object content to a local file
-//		try (FileOutputStream fileOutputStream = new FileOutputStream(new File(filePath))) {
-//			byte[] buffer = new byte[1024];
-//			int bytesRead;
-//			while ((bytesRead = objectInputStream.read(buffer)) != -1) {
-//				fileOutputStream.write(buffer, 0, bytesRead);
-//			}
-//			System.out.println("File retrieved and saved successfully!");
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
-//
-//		List<S3ObjectSummary> objectSummaries = s3Client.listObjects(bucketName).getObjectSummaries();
-//
-//// Print the names of the objects
-//		System.out.println("Objects in bucket " + bucketName + ":");
-//		for (S3ObjectSummary objectSummary : objectSummaries) {
-//			System.out.println("- " + objectSummary.getKey());
-//		}
+			System.out.println(presignedRequest.url());
+		}
 	}
 }

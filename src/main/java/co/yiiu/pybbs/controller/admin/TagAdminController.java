@@ -54,7 +54,7 @@ public class TagAdminController extends BaseAdminController {
         tag.setName(name);
         tag.setDescription(description);
         tag.setTopicCount(topicCount);
-        String path = fileUtil.upload(file, null, "tag");
+        String path = fileUtil.upload(file, "avatar", "tag");
         tag.setIcon(path);
         tagService.update(tag);
         return redirect("/admin/tag/list");

@@ -32,18 +32,20 @@ public class FileUploadPlugin {
 		if (StringUtils.isEmpty(cloudStoragePlatform) || UploadPlatForm.LOCAL.name().equals(cloudStoragePlatform)) {
 			return proceedingJoinPoint.proceed(args);
 		} else if (UploadPlatForm.QINIU.name().equals(cloudStoragePlatform)) {
-			return fileUtil.qiniuUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
+			return fileUtil.qiniuUpload((MultipartFile) args[0], null, (String) args[2]);
 		} else if (UploadPlatForm.OSS.name().equals(cloudStoragePlatform)) {
-			return fileUtil.ossUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
+			return fileUtil.ossUpload((MultipartFile) args[0], null, (String) args[2]);
 		} else if (UploadPlatForm.BACKBLAZE.name().equals(cloudStoragePlatform)) {
-			return fileUtil.backBlazeUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
-		} else if (UploadPlatForm.TEBI.name().equals(cloudStoragePlatform)) {
-			return fileUtil.tebiUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
+			//mock
+			return fileUtil.awsBlazeUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
+//			return fileUtil.backBlazeUpload((MultipartFile) args[0], null, (String) args[2]);
+		} else if (UploadPlatForm.AWS.name().equals(cloudStoragePlatform)) {
+			return fileUtil.awsBlazeUpload((MultipartFile) args[0], (String) args[1], (String) args[2]);
 		}
 		return null;
 	}
 
 	enum UploadPlatForm {
-		LOCAL, QINIU, OSS, BACKBLAZE, TEBI
+		LOCAL, QINIU, OSS, BACKBLAZE, AWS
 	}
 }
