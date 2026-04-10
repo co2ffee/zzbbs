@@ -287,6 +287,7 @@ public class IndexApiController extends BaseApiController {
 		User user = getApiUser();
 		ApiAssert.isTrue(user.getActive(), "你的帐号还没有激活，请去个人设置页面激活帐号");
 		ApiAssert.notEmpty(type, "上传文件类型不能为空");
+		ApiAssert.isTrue(Arrays.asList("avatar", "topic", "video").contains(type.toLowerCase()), "上传类型不在处理范围内");
 		Map<String, Object> resultMap = new HashMap<>();
 		List<String> urls = new ArrayList<>();
 		String url = fileUtil.awsBlazeUpload(null, type, null);
