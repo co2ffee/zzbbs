@@ -174,6 +174,11 @@ public class CommentService implements ICommentService {
     }
 
     @Override
+    public Comment selectByIdForAdmin(Integer id) {
+        return commentMapper.selectByIdForAdmin(id);
+    }
+
+    @Override
     public Comment selectByTgMessageId(Integer messageId) {
         QueryWrapper<Comment> wrapper = new QueryWrapper<>();
         wrapper.lambda().eq(Comment::getTgMessageId, messageId);
@@ -228,6 +233,25 @@ public class CommentService implements ICommentService {
             // 删除评论
             commentMapper.deleteById(comment.getId());
         }
+    }
+
+    // 恢复已删除评论
+    @Override
+    public void restore(Comment comment) {
+        // 话题评论数+1
+        Topic topic = topicService.selectByIdForAdmin(comment.getTopicId());
+        if (topic.getDeleted() != null && topic.getDeleted() == 1) {
+            throw new RuntimeException("该评论所属话题已被删除，请先恢复话题");
+        }
+        topic.setCommentCount(topic.getCommentCount() + 1);
+        topicService.update(topic, null);
+        // 加回用户积分
+        User user = userService.selectById(comment.getUserId());
+        user.setScore(user.getScore() + Integer.parseInt(systemConfigService.selectAllConfig().get
+                ("delete_comment_score").toString()));
+        userService.update(user);
+        // 恢复（使用自定义SQL绕过@TableLogic的deleted=0过滤）
+        commentMapper.restoreById(comment.getId());
     }
 
     // 查询用户的评论

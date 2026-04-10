@@ -131,6 +131,11 @@ public class TopicService implements ITopicService {
         return topicMapper.selectById(id);
     }
 
+    @Override
+    public Topic selectByIdForAdmin(Integer id) {
+        return topicMapper.selectByIdForAdmin(id);
+    }
+
     // 根据title查询话题，防止重复话题
     @Override
     public Topic selectByTitle(String title) {
@@ -166,20 +171,9 @@ public class TopicService implements ITopicService {
         indexedService.indexTopic(String.valueOf(topic.getId()), topic.getTitle(), topic.getContent());
     }
 
-    // 删除话题
+    // 删除话题（逻辑删除）
     @Override
     public void delete(Topic topic) {
-        Integer id = topic.getId();
-        // 删除相关通知
-        notificationService.deleteByTopicId(id);
-        // 删除相关收藏
-        collectService.deleteByTopicId(id);
-        // 删除相关的评论
-        commentService.deleteByTopicId(id);
-        // 将话题对应的标签 topicCount -1
-        tagService.reduceTopicCount(id);
-        // 删除相应的关联标签
-        topicTagService.deleteByTopicId(id);
         // 减去用户积分
         User user = userService.selectById(topic.getUserId());
         user.setScore(user.getScore() - Integer.parseInt(systemConfigService.selectAllConfig().get("delete_topic_score")
@@ -187,11 +181,25 @@ public class TopicService implements ITopicService {
         userService.update(user);
         // 删除索引
         indexedService.deleteTopicIndex(String.valueOf(topic.getId()));
-        // 最后删除话题
-        topicMapper.deleteById(id);
+        // 逻辑删除话题（@TableLogic 自动改写为 UPDATE SET deleted=1）
+        topicMapper.deleteById(topic.getId());
     }
 
-    // 根据用户id删除帖子
+    // 恢复已删除话题
+    @Override
+    public void restore(Topic topic) {
+        // 加回用户积分
+        User user = userService.selectById(topic.getUserId());
+        user.setScore(user.getScore() + Integer.parseInt(systemConfigService.selectAllConfig().get("delete_topic_score")
+                .toString()));
+        userService.update(user);
+        // 重新索引
+        indexedService.indexTopic(String.valueOf(topic.getId()), topic.getTitle(), topic.getContent());
+        // 恢复（使用自定义SQL绕过@TableLogic的deleted=0过滤）
+        topicMapper.restoreById(topic.getId());
+    }
+
+    // 根据用户id删除帖子（逻辑删除）
     @Override
     public void deleteByUserId(Integer userId) {
         QueryWrapper<Topic> wrapper = new QueryWrapper<>();
@@ -200,17 +208,8 @@ public class TopicService implements ITopicService {
         topics.forEach(topic -> {
             // 删除索引
             indexedService.deleteTopicIndex(String.valueOf(topic.getId()));
-            // 删除话题相关联的评论
-            commentService.deleteByTopicId(topic.getId());
-            // 删除被收藏的话题记录
-            collectService.deleteByTopicId(topic.getId());
-            // 删除关联标签及标签统计数据
-            // 旧标签每个topicCount都-1
-            tagService.reduceTopicCount(topic.getId());
-            // 删除话题关联的标签中间表数据
-            topicTagService.deleteByTopicId(topic.getId());
         });
-        //删除话题
+        // 逻辑删除（@TableLogic 自动改写为 UPDATE SET deleted=1）
         topicMapper.delete(wrapper);
     }
 

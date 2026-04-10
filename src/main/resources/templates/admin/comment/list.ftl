@@ -34,6 +34,7 @@
                         <th>#</th>
                         <th>话题</th>
                         <th>用户</th>
+                        <th>状态</th>
                         <th>时间</th>
                         <th>操作</th>
                     </tr>
@@ -44,6 +45,15 @@
                             <td>${comment.id}</td>
                             <td><a href="/topic/${comment.topicId}" target="_blank">${comment.title!}</a></td>
                             <td>${comment.username!}</td>
+                            <td>
+                                <#if comment.deleted>
+                                    <span class="label label-danger">已删除</span>
+                                <#elseif !comment.status>
+                                    <span class="label label-warning">审核中</span>
+                                <#else>
+                                    <span class="label label-success">正常</span>
+                                </#if>
+                            </td>
                             <td>${comment.inTime!}</td>
                             <td>
                                 <#if sec.hasPermission("comment:examine") && !comment.status>
@@ -53,12 +63,16 @@
                                     <a href="/admin/comment/edit?id=${comment.id}" class="btn btn-xs btn-warning">编辑</a>
                                 </#if>
                                 <#if sec.hasPermission("comment:delete")>
-                                    <button onclick="deleteBtn('${comment.id}')" class="btn btn-xs btn-danger">删除</button>
+                                    <#if comment.deleted>
+                                        <button onclick="restoreBtn('${comment.id}')" class="btn btn-xs btn-success">恢复</button>
+                                    <#else>
+                                        <button onclick="deleteBtn('${comment.id}')" class="btn btn-xs btn-danger">删除</button>
+                                    </#if>
                                 </#if>
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="5">${model.formatContent(comment.content)}</td>
+                            <td colspan="6">${model.formatContent(comment.content)}</td>
                         </tr>
                     </#list>
                     </tbody>
@@ -107,6 +121,21 @@
         function deleteBtn(id) {
             if (confirm('确定要删除这条评论吗？')) {
                 $.get("/admin/comment/delete?id=" + id, function (data) {
+                    if (data.code === 200) {
+                        toast("成功", "success");
+                        setTimeout(function () {
+                            window.location.reload();
+                        }, 700);
+                    } else {
+                        toast(data.description);
+                    }
+                })
+            }
+        }
+
+        function restoreBtn(id) {
+            if (confirm('确定要恢复这条评论吗？')) {
+                $.get("/admin/comment/restore?id=" + id, function (data) {
                     if (data.code === 200) {
                         toast("成功", "success");
                         setTimeout(function () {

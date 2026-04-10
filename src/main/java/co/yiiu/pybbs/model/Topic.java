@@ -2,6 +2,7 @@ package co.yiiu.pybbs.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -35,6 +36,8 @@ public class Topic implements Serializable {
     private Boolean good;
     // 点赞用户的id英文,隔开的，要计算被多少人点赞过，可以通过英文,分隔这个字符串计算数量
     private String upIds;
+    @TableLogic
+    private Integer deleted;
 
     public String getStyle() {
         return style;
@@ -138,5 +141,13 @@ public class Topic implements Serializable {
 
     public void setGood(Boolean good) {
         this.good = good;
+    }
+
+    public Integer getDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(Integer deleted) {
+        this.deleted = deleted;
     }
 }

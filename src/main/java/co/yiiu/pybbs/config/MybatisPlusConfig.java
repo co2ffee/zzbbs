@@ -2,7 +2,9 @@ package co.yiiu.pybbs.config;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.MybatisXMLLanguageDriver;
+import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.extension.MybatisMapWrapperFactory;
+import com.baomidou.mybatisplus.extension.injector.LogicSqlInjector;
 import com.baomidou.mybatisplus.extension.plugins.PaginationInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.pagination.optimize.JsqlParserCountOptimize;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
@@ -46,6 +48,11 @@ public class MybatisPlusConfig {
         sqlSessionFactory.setDataSource(dataSource);
 
         sqlSessionFactory.setConfiguration(configuration);
+
+        // 配置逻辑删除注入器
+        GlobalConfig globalConfig = new GlobalConfig();
+        globalConfig.setSqlInjector(new LogicSqlInjector());
+        sqlSessionFactory.setGlobalConfig(globalConfig);
 
         // 添加分页插件，这里有个坑
         // 在没有配置Map 下划线转驼峰这个配置之前，配置了上面注释掉的分页插件配置，结果配置了这个之后，分页就失效了

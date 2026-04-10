@@ -29,6 +29,8 @@ public interface ICommentService {
 
     Comment selectById(Integer id);
 
+    Comment selectByIdForAdmin(Integer id);
+
     Comment selectByTgMessageId(Integer messageId);
 
     // 更新评论
@@ -39,6 +41,9 @@ public interface ICommentService {
 
     // 删除评论
     void delete(Comment comment);
+
+    // 恢复已删除评论
+    void restore(Comment comment);
 
     // 查询用户的评论
     MyPage<Map<String, Object>> selectByUserId(Integer userId, Integer pageNo, Integer pageSize);

@@ -2,6 +2,7 @@ package co.yiiu.pybbs.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -27,6 +28,8 @@ public class Comment implements Serializable {
     private Integer tgMessageId;
     // true: 通过，false: 审核中
     private Boolean status;
+    @TableLogic
+    private Integer deleted;
 
     public String getStyle() {
         return style;
@@ -106,5 +109,13 @@ public class Comment implements Serializable {
 
     public void setStatus(Boolean status) {
         this.status = status;
+    }
+
+    public Integer getDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(Integer deleted) {
+        this.deleted = deleted;
     }
 }

@@ -31,6 +31,9 @@ public interface ITopicService {
     // 根据id查询话题
     Topic selectById(Integer id);
 
+    // 管理员根据id查询话题（包含已删除）
+    Topic selectByIdForAdmin(Integer id);
+
     // 根据title查询话题，防止重复话题
     Topic selectByTitle(String title);
 
@@ -42,6 +45,9 @@ public interface ITopicService {
 
     // 删除话题
     void delete(Topic topic);
+
+    // 恢复已删除话题
+    void restore(Topic topic);
 
     // 根据用户id删除帖子
     void deleteByUserId(Integer userId);

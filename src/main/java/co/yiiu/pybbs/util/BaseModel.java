@@ -84,6 +84,16 @@ public class BaseModel {
         Document parse = Jsoup.parse(content, "", Parser.xmlParser());
         Elements tableElements = parse.select("table");
         tableElements.forEach(element -> element.addClass("table table-bordered"));
+        // 给video标签的父元素添加embed-responsive类，让Bootstrap正确撑开高度
+        Elements videoElements = parse.select("video");
+        videoElements.forEach(element -> {
+            element.addClass("embed-responsive-item");
+            element.attr("width", "100%");
+            element.attr("height", "100%");
+            if (element.parent() != null) {
+                element.parent().addClass("embed-responsive embed-responsive-16by9");
+            }
+        });
         Elements aElements = parse.select("p");
         if (!aElements.isEmpty()) {
             aElements.forEach(element -> {

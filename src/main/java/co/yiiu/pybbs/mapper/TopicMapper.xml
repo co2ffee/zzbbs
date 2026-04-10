@@ -16,14 +16,15 @@
         from topic t
         left join user u on t.user_id = u.id
         <where>
+            t.deleted = 0
             <if test="tab == 'good'">
-                t.good = true
+                and t.good = true
             </if>
             <if test="tab == 'noanswer'">
-                t.comment_count = 0
+                and t.comment_count = 0
             </if>
             <if test="tab == 'hot'">
-                date(t.in_time) &lt;= date_add(curdate(), interval 1 day)
+                and date(t.in_time) &lt;= date_add(curdate(), interval 1 day)
                 and date(t.in_time) &gt;= date_sub(curdate(), interval 7 day)
             </if>
         </where>
@@ -43,6 +44,7 @@
         left join tag tag on tag.id = tt.tag_id
         <where>
             tag.name = #{tag}
+            and t.deleted = 0
         </where>
         order by t.top desc, t.in_time desc
     </select>
@@ -51,7 +53,7 @@
         select t.*, u.username, u.avatar
         from topic t
         left join user u on t.user_id = u.id
-        where t.user_id = #{userId}
+        where t.user_id = #{userId} and t.deleted = 0
         order by t.in_time desc
     </select>
 
@@ -73,16 +75,25 @@
     <select id="countToday" resultType="integer">
         select count(1)
         from topic t
-        where t.in_time between curdate() and date_add(curdate(), interval 1 day)
+        where t.deleted = 0 and t.in_time between curdate() and date_add(curdate(), interval 1 day)
     </select>
 
     <select id="search" resultType="map">
         select t.id, t.title, t.content
         from topic t
         <where>
-            t.title like concat(concat('%',#{keyword}),'%') or t.content like concat(concat('%',#{keyword}),'%')
+            t.deleted = 0
+            and (t.title like concat(concat('%',#{keyword}),'%') or t.content like concat(concat('%',#{keyword}),'%'))
         </where>
         order by t.in_time desc
     </select>
+
+    <select id="selectByIdForAdmin" resultType="co.yiiu.pybbs.model.Topic">
+        select * from topic where id = #{id}
+    </select>
+
+    <update id="restoreById">
+        update topic set deleted = 0 where id = #{id}
+    </update>
 
 </mapper>

@@ -56,7 +56,7 @@ public class TopicAdminController extends BaseAdminController {
     @RequiresPermissions("topic:edit")
     @GetMapping("/edit")
     public String edit(Integer id, Model model) {
-        model.addAttribute("topic", topicService.selectById(id));
+        model.addAttribute("topic", topicService.selectByIdForAdmin(id));
         // 将标签集合转成逗号隔开的字符串
         List<Tag> tagList = tagService.selectByTopicId(id);
         String tags = StringUtils.collectionToCommaDelimitedString(tagList.stream().map(Tag::getName).collect(Collectors
@@ -72,7 +72,7 @@ public class TopicAdminController extends BaseAdminController {
         title = Jsoup.clean(title, Whitelist.basic());
         ApiAssert.notEmpty(title, "话题标题不能为空");
 
-        Topic topic = topicService.selectById(id);
+        Topic topic = topicService.selectByIdForAdmin(id);
         topic.setTitle(title);
         topic.setContent(content);
         topic.setModifyTime(new Date());
@@ -84,7 +84,7 @@ public class TopicAdminController extends BaseAdminController {
     @GetMapping("/good")
     @ResponseBody
     public Result good(Integer id) {
-        Topic topic = topicService.selectById(id);
+        Topic topic = topicService.selectByIdForAdmin(id);
         topic.setGood(!topic.getGood());
         topicService.update(topic, null);
         return success();
@@ -94,7 +94,7 @@ public class TopicAdminController extends BaseAdminController {
     @GetMapping("/top")
     @ResponseBody
     public Result top(Integer id) {
-        Topic topic = topicService.selectById(id);
+        Topic topic = topicService.selectByIdForAdmin(id);
         topic.setTop(!topic.getTop());
         topicService.update(topic, null);
         return success();
@@ -104,8 +104,17 @@ public class TopicAdminController extends BaseAdminController {
     @GetMapping("/delete")
     @ResponseBody
     public Result delete(Integer id) {
-        Topic topic = topicService.selectById(id);
+        Topic topic = topicService.selectByIdForAdmin(id);
         topicService.delete(topic);
+        return success();
+    }
+
+    @RequiresPermissions("topic:delete")
+    @GetMapping("/restore")
+    @ResponseBody
+    public Result restore(Integer id) {
+        Topic topic = topicService.selectByIdForAdmin(id);
+        topicService.restore(topic);
         return success();
     }
 
@@ -113,7 +122,7 @@ public class TopicAdminController extends BaseAdminController {
     @GetMapping("/index")
     @ResponseBody
     public Result index(Integer id) {
-        Topic topic = topicService.selectById(id);
+        Topic topic = topicService.selectByIdForAdmin(id);
         indexedService.indexTopic(String.valueOf(topic.getId()), topic.getTitle(), topic.getContent());
         return success();
     }

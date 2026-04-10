@@ -56,12 +56,14 @@
                             <td><a href="/user/${topic.username}" target="_blank">${topic.username}</a></td>
                             <td>${topic.commentCount}</td>
                             <td>
+                                <#if topic.deleted>
+                                    <span class="label label-danger">已删除</span>
+                                </#if>
                                 <#if topic.top>
-                                    置顶
-                                <#elseif topic.good>
-                                    精华
-                                <#else>
-                                    &nbsp;
+                                    <span class="label label-warning">置顶</span>
+                                </#if>
+                                <#if topic.good>
+                                    <span class="label label-success">精华</span>
                                 </#if>
                             </td>
                             <td>${topic.inTime!}</td>
@@ -98,9 +100,15 @@
                                     <a href="/admin/topic/edit?id=${topic.id}" class="btn btn-xs btn-warning">编辑</a>
                                 </#if>
                                 <#if sec.hasPermission("topic:delete")>
-                                    <button onclick="actionBtn('${topic.id}', 'delete', this)"
-                                            class="btn btn-xs btn-danger">删除
-                                    </button>
+                                    <#if topic.deleted>
+                                        <button onclick="actionBtn('${topic.id}', 'restore', this)"
+                                                class="btn btn-xs btn-success">恢复
+                                        </button>
+                                    <#else>
+                                        <button onclick="actionBtn('${topic.id}', 'delete', this)"
+                                                class="btn btn-xs btn-danger">删除
+                                        </button>
+                                    </#if>
                                 </#if>
                             </td>
                         </tr>
@@ -144,6 +152,9 @@
             } else if (action === 'delete') {
                 url = '/admin/topic/delete?id=' + id;
                 msg = '确定要删除这条评论吗？';
+            } else if (action === 'restore') {
+                url = '/admin/topic/restore?id=' + id;
+                msg = '确定要恢复这条话题吗？';
             }
             if (confirm(msg)) {
                 $.get(url, function (data) {

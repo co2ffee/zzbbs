@@ -24,4 +24,8 @@ public interface CommentMapper extends BaseMapper<Comment> {
             startDate, @Param("endDate") String endDate, @Param("username") String username);
 
     int countToday();
+
+    Comment selectByIdForAdmin(@Param("id") Integer id);
+
+    int restoreById(@Param("id") Integer id);
 }

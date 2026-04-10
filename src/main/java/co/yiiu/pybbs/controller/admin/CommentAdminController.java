@@ -50,8 +50,8 @@ public class CommentAdminController extends BaseAdminController {
     @RequiresPermissions("comment:edit")
     @GetMapping("/edit")
     public String edit(Integer id, Model model) {
-        Comment comment = commentService.selectById(id);
-        Topic topic = topicService.selectById(comment.getTopicId());
+        Comment comment = commentService.selectByIdForAdmin(id);
+        Topic topic = topicService.selectByIdForAdmin(comment.getTopicId());
         model.addAttribute("comment", comment);
         model.addAttribute("topic", topic);
         return "admin/comment/edit";
@@ -61,7 +61,7 @@ public class CommentAdminController extends BaseAdminController {
     @PostMapping("/edit")
     @ResponseBody
     public Result update(Integer id, String content) {
-        Comment comment = commentService.selectById(id);
+        Comment comment = commentService.selectByIdForAdmin(id);
         comment.setContent(content);
         commentService.update(comment);
         return success();
@@ -71,7 +71,7 @@ public class CommentAdminController extends BaseAdminController {
     @GetMapping("/examine")
     @ResponseBody
     public Result examine(Integer id) {
-        Comment comment = commentService.selectById(id);
+        Comment comment = commentService.selectByIdForAdmin(id);
         comment.setStatus(true);
         commentService.update(comment);
         return success();
@@ -81,8 +81,17 @@ public class CommentAdminController extends BaseAdminController {
     @GetMapping("/delete")
     @ResponseBody
     public Result delete(Integer id) {
-        Comment comment = commentService.selectById(id);
+        Comment comment = commentService.selectByIdForAdmin(id);
         commentService.delete(comment);
+        return success();
+    }
+
+    @RequiresPermissions("comment:delete")
+    @GetMapping("/restore")
+    @ResponseBody
+    public Result restore(Integer id) {
+        Comment comment = commentService.selectByIdForAdmin(id);
+        commentService.restore(comment);
         return success();
     }
 }
