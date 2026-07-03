@@ -158,10 +158,12 @@ public class CommentService implements ICommentService {
                 formatMessage = String.format("%s 评论了话题 <a href=\"%s\">%s</a> 内容： %s", user.getUsername(), domain + "/topic/" + topic.getId(), topic.getTitle(), StringUtil.removeSpecialChar(comment.getContent()));
             }
             Integer message_id = telegramBotService.init().sendMessage(formatMessage, true, null);
-            Comment newComment = new Comment();
-            newComment.setId(comment.getId());
-            newComment.setTgMessageId(message_id);
-            commentMapper.updateById(newComment);
+            if (message_id != null) {
+                Comment newComment = new Comment();
+                newComment.setId(comment.getId());
+                newComment.setTgMessageId(message_id);
+                commentMapper.updateById(newComment);
+            }
 
         }).start();
 

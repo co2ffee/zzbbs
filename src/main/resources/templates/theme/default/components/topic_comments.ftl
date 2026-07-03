@@ -6,9 +6,33 @@
             <div class="card comments">
                 <div class="card-header">共 ${model.commentSize(comments, _user)} 条评论</div>
                 <div class="card-body">
+                    <#assign replyCount = 0>
+                    <#assign rootId = 0>
                     <#list comments as comment>
+                        <#if comment.layer == 0>
+                            <#assign replyCount = 0>
+                            <#assign rootId = comment.id>
+                        <#else>
+                            <#assign replyCount = replyCount + 1>
+                        </#if>
+
                         <#if comment.status || (_user?? && _user.id == comment.userId && !comment.status) >
-                            <div class="media" id="comment${comment.id}" style="padding-left: ${comment.layer * 30}px;">
+                            <#assign replyClass = "">
+                            <#assign displayStyle = "">
+                            <#if comment.layer != 0>
+                                <#assign replyClass = "reply-to-" + rootId>
+                                <#if replyCount &gt; 1>
+                                    <#assign displayStyle = "display:none;">
+                                </#if>
+                            </#if>
+
+                            <#if replyCount == 2>
+                                <div class="media expand-btn-${rootId}" style="padding-left: 30px; margin-bottom: 10px;">
+                                    <a href="javascript:;" onclick="expandReplies('${rootId}')" class="btn btn-xs btn-default">展开更多回复 <i class="fa fa-angle-down"></i></a>
+                                </div>
+                            </#if>
+
+                            <div class="media ${replyClass}" id="comment${comment.id}" style="padding-left: ${(comment.layer == 0)?string('0', '30')}px; ${displayStyle}">
                                 <div class="media-body">
                                     <div class="gray d-flex justify-content-between">
                                         <div>
@@ -57,10 +81,16 @@
                                 </div>
                             </div>
                             <#if comment?has_next>
-                                <div class="divide"></div>
+                                <div class="divide ${replyClass}" style="${displayStyle}"></div>
                             </#if>
                         </#if>
                     </#list>
+                    <script>
+                        function expandReplies(rootId) {
+                            $(".expand-btn-" + rootId).hide();
+                            $(".reply-to-" + rootId).fadeIn();
+                        }
+                    </script>
                     <#if _user??>
                         <script>
                             function vote(id) {

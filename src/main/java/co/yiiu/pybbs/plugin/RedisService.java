@@ -99,10 +99,16 @@ public class RedisService implements BaseService<JedisPool> {
     public String getString(String key) {
         JedisPool instance = this.instance();
         if (StringUtils.isEmpty(key) || instance == null) return null;
-        Jedis jedis = instance.getResource();
-        String value = jedis.get(key);
-        jedis.close();
-        return value;
+        try {
+            Jedis jedis = instance.getResource();
+            String value = jedis.get(key);
+            jedis.close();
+            return value;
+        } catch (Exception e) {
+            log.warn("redis获取数据失败，key: {}，错误: {}", key, e.getMessage());
+            this.jedisPool = null; // 重置连接池，下次重试
+            return null;
+        }
     }
 
     public void setString(String key, String value) {
@@ -119,19 +125,29 @@ public class RedisService implements BaseService<JedisPool> {
     public void setString(String key, String value, int expireTime) {
         JedisPool instance = this.instance();
         if (StringUtils.isEmpty(key) || StringUtils.isEmpty(value) || instance == null) return;
-        Jedis jedis = instance.getResource();
-        SetParams params = new SetParams();
-        params.px(expireTime * 1000);
-        jedis.set(key, value, params);
-        jedis.close();
+        try {
+            Jedis jedis = instance.getResource();
+            SetParams params = new SetParams();
+            params.px(expireTime * 1000);
+            jedis.set(key, value, params);
+            jedis.close();
+        } catch (Exception e) {
+            log.warn("redis写入数据失败，key: {}，错误: {}", key, e.getMessage());
+            this.jedisPool = null;
+        }
     }
 
     public void delString(String key) {
         JedisPool instance = this.instance();
         if (StringUtils.isEmpty(key) || instance == null) return;
-        Jedis jedis = instance.getResource();
-        jedis.del(key); // 返回值成功是 1
-        jedis.close();
+        try {
+            Jedis jedis = instance.getResource();
+            jedis.del(key); // 返回值成功是 1
+            jedis.close();
+        } catch (Exception e) {
+            log.warn("redis删除数据失败，key: {}，错误: {}", key, e.getMessage());
+            this.jedisPool = null;
+        }
     }
 
     // TODO 后面有需要会补充获取 list, map 等方法
