@@ -1,8 +1,5 @@
 # PyBBS — Java BBS Forum System / Java 论坛系统
 
-> **Note / 注意：** Please mark "powered by pybbs" in a conspicuous place when using this project.  
-> 使用本项目时，请在醒目位置标明 **powered by pybbs**。
-
 **Current Version / 当前版本：** `5.2.1`
 
 **[中文](#中文) | [English](#english)**
@@ -175,7 +172,7 @@ All settings are managed from the admin panel without touching config files:
 
 ### License
 
-**GNU AGPLv3** — Free for personal learning. Commercial use requires a one-time license fee of ¥68.00.
+**GNU AGPLv3**
 
 ### Feedback & Contribution
 
@@ -350,7 +347,7 @@ docker-compose up -d
 
 ### 开源协议
 
-**GNU AGPLv3** — 个人学习使用永久免费；商用授权一次性付费 **¥68.00** 永久使用。
+**GNU AGPLv3**
 
 ### 反馈与贡献
 
