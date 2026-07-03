@@ -1,4 +1,4 @@
-# PyBBS — Java BBS Forum System / Java 论坛系统
+# Java 论坛系统
 
 **Current Version / 当前版本：** `5.2.1`
 
@@ -344,28 +344,3 @@ docker-compose up -d
 | Elasticsearch 配置 | Host、端口、索引名、是否开启搜索 |
 | GitHub 登录配置 | Client ID、Client Secret、回调地址 |
 | WebSocket 配置 | 是否开启、Host、端口 |
-
-### 开源协议
-
-**GNU AGPLv3**
-
-### 反馈与贡献
-
-- 提交 Issue：[GitHub Issues](https://github.com/atjiu/pybbs/issues)
-- 欢迎提交 PR！
-
----
-
-### 截图 / Screenshots
-
-**首页列表 / Home**
-
-![](./snapshot/1.png)
-
-**帖子详情 / Topic Detail**
-
-![](./snapshot/2.png)
-
-**视频解析 / Video Parsing**
-
-![](./snapshot/3.png)
