@@ -40,4 +40,11 @@ public class FileAdminController extends BaseAdminController {
         boolean ok = fileUtil.deleteBackblazeObject(key);
         return ok ? success() : error("删除失败");
     }
+
+    @RequiresPermissions("file:list")
+    @GetMapping("/stats")
+    @ResponseBody
+    public Result stats() {
+        return success(fileUtil.getBackblazeBucketStats());
+    }
 }

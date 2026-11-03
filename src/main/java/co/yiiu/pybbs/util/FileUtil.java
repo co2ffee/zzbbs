@@ -365,6 +365,37 @@ public class FileUtil {
 	}
 
 	/**
+	 * 统计dljblob桶里的文件总数和总大小（需要完整翻一遍桶，按需调用，不要在每次翻页时都算）
+	 */
+	public Map<String, Object> getBackblazeBucketStats() {
+		long totalCount = 0;
+		long totalSize = 0;
+		String continuationToken = null;
+		try (S3Client s3Client = buildBackblazeS3Client()) {
+			do {
+				ListObjectsV2Request.Builder builder = ListObjectsV2Request.builder()
+						.bucket(BACKBLAZE_BUCKET_NAME)
+						.maxKeys(1000);
+				if (!StringUtils.isEmpty(continuationToken)) {
+					builder.continuationToken(continuationToken);
+				}
+				ListObjectsV2Response response = s3Client.listObjectsV2(builder.build());
+				for (S3Object obj : response.contents()) {
+					totalCount++;
+					totalSize += obj.size();
+				}
+				continuationToken = Boolean.TRUE.equals(response.isTruncated()) ? response.nextContinuationToken() : null;
+			} while (continuationToken != null);
+		} catch (Exception e) {
+			log.error("get backblaze bucket stats fail", e);
+		}
+		Map<String, Object> result = new HashMap<>();
+		result.put("count", totalCount);
+		result.put("totalSize", totalSize);
+		return result;
+	}
+
+	/**
 	 * 删除dljblob桶里的单个文件
 	 */
 	public boolean deleteBackblazeObject(String key) {
