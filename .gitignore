@@ -30,3 +30,7 @@ logs/
 mysql
 static/upload/
 .sass-cache/
+
+# 含数据库密码等敏感信息，不进版本库
+src/main/resources/application-dev.yml
+src/main/resources/application-prod.yml
