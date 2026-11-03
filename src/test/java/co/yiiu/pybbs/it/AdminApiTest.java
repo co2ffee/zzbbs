@@ -385,4 +385,32 @@ public class AdminApiTest extends AbstractApiTest {
                 .andExpect(jsonPath("$.code").value(200));
         assertEquals(null, adminUserService.selectByUsername(username));
     }
+
+    /**
+     * 回归：话题已被（软）删除时，管理端仍要能删除它下面的评论。
+     * 原来 CommentService.delete 用带逻辑删除过滤的 selectById 取话题，查到 null 后空指针，事务回滚，评论删不掉。
+     */
+    @Test
+    public void deleteComment_whenItsTopicIsAlreadySoftDeleted() throws Exception {
+        User author = createUser("cmtdel");
+        String authorToken = loginToken(author.getUsername());
+        Topic topic = topicService.insert(unique("cmtdeltopic"), "content", "", author);
+        mvc.perform(withToken(post("/api/comment"), authorToken).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"content\":\"to be deleted\",\"topicId\":\"" + topic.getId() + "\"}"))
+                .andExpect(jsonPath("$.code").value(200));
+        String token = adminToken();
+        String listBody = mvc.perform(withToken(get("/admin/comment/list").param("username", author.getUsername()), token))
+                .andReturn().getResponse().getContentAsString();
+        String commentId = readDetail(listBody).path("records").get(0).path("id").asText();
+
+        mvc.perform(withToken(get("/admin/topic/delete").param("id", topic.getId().toString()), token))
+                .andExpect(jsonPath("$.code").value(200));
+        mvc.perform(withToken(get("/admin/comment/delete").param("id", commentId), token))
+                .andExpect(jsonPath("$.code").value(200));
+
+        String after = mvc.perform(withToken(get("/admin/comment/list").param("username", author.getUsername()), token))
+                .andReturn().getResponse().getContentAsString();
+        JsonNode first = readDetail(after).path("records").get(0);
+        assertTrue("评论应已被删除: " + after, first.path("deleted").asInt() == 1 || first.path("deleted").asBoolean());
+    }
 }

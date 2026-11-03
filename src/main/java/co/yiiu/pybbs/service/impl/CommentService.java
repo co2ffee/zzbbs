@@ -224,15 +224,20 @@ public class CommentService implements ICommentService {
     @Override
     public void delete(Comment comment) {
         if (comment != null) {
-            // 话题评论数-1
-            Topic topic = topicService.selectById(comment.getTopicId());
-            topic.setCommentCount(topic.getCommentCount() - 1);
-            topicService.update(topic, null);
-            // 减去用户积分
+            // 话题评论数-1。话题可能已被（软）删除或物理删除，selectById 带逻辑删除过滤会返回 null，
+            // 所以用 selectByIdForAdmin 查；话题已删除时不改它的评论数（也不能再更新已删除的话题），只删评论、扣积分
+            Topic topic = topicService.selectByIdForAdmin(comment.getTopicId());
+            if (topic != null && (topic.getDeleted() == null || topic.getDeleted() != 1)) {
+                topic.setCommentCount(topic.getCommentCount() - 1);
+                topicService.update(topic, null);
+            }
+            // 减去用户积分（用户可能已被删除）
             User user = userService.selectById(comment.getUserId());
-            user.setScore(user.getScore() - Integer.parseInt(systemConfigService.selectAllConfig().get
-                    ("delete_comment_score").toString()));
-            userService.update(user);
+            if (user != null) {
+                user.setScore(user.getScore() - Integer.parseInt(systemConfigService.selectAllConfig().get
+                        ("delete_comment_score").toString()));
+                userService.update(user);
+            }
             // 删除评论
             commentMapper.deleteById(comment.getId());
         }
