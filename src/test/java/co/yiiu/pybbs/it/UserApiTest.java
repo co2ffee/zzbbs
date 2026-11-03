@@ -220,4 +220,24 @@ public class UserApiTest extends AbstractApiTest {
                 .andExpect(jsonPath("$.detail.topic.view").value(start + 1));
         mvc.perform(get("/api/topic/" + topicId)).andExpect(jsonPath("$.detail.topic.view").value(start + 2));
     }
+
+    /** 访问不存在的资源，要返回明确的提示，而不是笼统的“服务器出错啦” */
+    @Test
+    public void missingResources_returnClearMessages() throws Exception {
+        mvc.perform(get("/api/topic/99999999"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.description").value("话题不存在"));
+        // 非法参数（id 不是数字）
+        mvc.perform(get("/api/topic/abc"))
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.description").value("请求参数不正确"));
+        for (String path : new String[]{"", "/topics", "/comments", "/collects"}) {
+            mvc.perform(get("/api/user/no_such_user_zz" + path))
+                    .andExpect(jsonPath("$.code").value(201))
+                    .andExpect(jsonPath("$.description").value("用户不存在"));
+        }
+        // 已有的行为保持不变：标签不存在
+        mvc.perform(get("/api/tag/no-such-tag-zz")).andExpect(jsonPath("$.code").value(201));
+    }
 }

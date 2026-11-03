@@ -48,6 +48,7 @@ public class TopicApiController extends BaseApiController {
         Map<String, Object> map = new HashMap<>();
         // 查询话题详情
         Topic topic = topicService.selectById(id);
+        ApiAssert.notNull(topic, "话题不存在");
         // 查询话题关联的标签
         List<Tag> tags = tagService.selectByTopicId(id);
         // 查询话题的评论
@@ -111,6 +112,7 @@ public class TopicApiController extends BaseApiController {
         ApiAssert.notEmpty(title, "请输入标题");
         // 更新话题
         Topic topic = topicService.selectById(id);
+        ApiAssert.notNull(topic, "话题不存在");
         ApiAssert.isTrue(topic.getUserId().equals(user.getId()), "谁给你的权限修改别人的话题的？");
         topic.setTitle(Jsoup.clean(title, Whitelist.none().addTags("video")));
         topic.setContent(content);
@@ -125,6 +127,7 @@ public class TopicApiController extends BaseApiController {
     public Result delete(@PathVariable Integer id) {
         User user = getApiUser();
         Topic topic = topicService.selectById(id);
+        ApiAssert.notNull(topic, "话题不存在");
         ApiAssert.isTrue(topic.getUserId().equals(user.getId()), "谁给你的权限删除别人的话题的？");
         topicService.delete(topic);
         return success();

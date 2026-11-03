@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.annotation.Resource;
@@ -61,6 +62,20 @@ public class GlobalExceptionHandler {
         result.setDescription("服务器出错啦~");
         response.setContentType("application/json;charset=utf-8");
         response.getWriter().write(Optional.ofNullable(JsonUtil.objectToJson(result)).orElse(""));
+    }
+
+    /**
+     * 参数类型不对（比如 /api/topic/abc，id 不是数字）或缺少必填参数：返回明确的提示，而不是“服务器出错啦”
+     */
+    @ExceptionHandler(value = {MethodArgumentTypeMismatchException.class,
+            org.springframework.web.bind.MissingServletRequestParameterException.class})
+    @ResponseBody
+    public Result badRequestHandler(Exception e) {
+        log.info("bad request: {}", e.getMessage());
+        Result result = new Result();
+        result.setCode(201);
+        result.setDescription("请求参数不正确");
+        return result;
     }
 
     /**
