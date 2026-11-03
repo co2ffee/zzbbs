@@ -201,4 +201,23 @@ public class UserApiTest extends AbstractApiTest {
         String upIds = readDetail(after).path("topic").path("upIds").asText("");
         assertEquals("取消点赞后 upIds 应该为空，实际: [" + upIds + "]", "", upIds);
     }
+
+    /** 打开详情页计一次浏览；点赞/评论后的“刷新”带 countView=false，不重复计数 */
+    @Test
+    public void topicDetail_countsViewsOnlyWhenAsked() throws Exception {
+        User author = createUser("viewauthor");
+        String token = loginToken(author.getUsername());
+        String created = mvc.perform(withToken(post("/api/topic"), token).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"" + unique("viewtopic") + "\",\"content\":\"views\",\"tag\":\"\"}"))
+                .andExpect(jsonPath("$.code").value(200)).andReturn().getResponse().getContentAsString();
+        int topicId = readDetail(created).path("id").asInt();
+        int start = readDetail(created).path("view").asInt();
+
+        mvc.perform(get("/api/topic/" + topicId)).andExpect(jsonPath("$.detail.topic.view").value(start + 1));
+        mvc.perform(get("/api/topic/" + topicId).param("countView", "false"))
+                .andExpect(jsonPath("$.detail.topic.view").value(start + 1));
+        mvc.perform(get("/api/topic/" + topicId).param("countView", "false"))
+                .andExpect(jsonPath("$.detail.topic.view").value(start + 1));
+        mvc.perform(get("/api/topic/" + topicId)).andExpect(jsonPath("$.detail.topic.view").value(start + 2));
+    }
 }
