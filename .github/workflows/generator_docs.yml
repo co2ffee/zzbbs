@@ -29,9 +29,3 @@ jobs:
         run: |
           mvn clean compile --file docs/pom.xml
           cp -r ./docs/target/generated-docs/ ../docs
-      - name: Deploy Docs
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.push_token }}
-          publish_dir: ./docs/target/generated-docs
-
