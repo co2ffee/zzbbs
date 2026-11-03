@@ -7,6 +7,7 @@ import co.yiiu.pybbs.service.ICodeService;
 import co.yiiu.pybbs.service.ISystemConfigService;
 import co.yiiu.pybbs.service.IUserService;
 import co.yiiu.pybbs.util.Result;
+import co.yiiu.pybbs.util.FileUtil;
 import co.yiiu.pybbs.util.StringUtil;
 import co.yiiu.pybbs.util.bcrypt.BCryptPasswordEncoder;
 import org.springframework.util.StringUtils;
@@ -31,6 +32,8 @@ public class SettingsApiController extends BaseApiController {
     private ICodeService codeService;
     @Resource
     private ISystemConfigService systemConfigService;
+    @Resource
+    private FileUtil fileUtil;
 
     // 当前登录用户的最新信息（设置页使用；password/token 不会被序列化）
     @GetMapping
@@ -57,14 +60,7 @@ public class SettingsApiController extends BaseApiController {
         // 只接受自己存储域名下的地址，避免被写入任意外部图片地址
         String avatar = body.get("avatar");
         if (!StringUtils.isEmpty(avatar)) {
-            boolean allowed = false;
-            for (String key : new String[]{"backblaze_domain", "static_url"}) {
-                String prefix = systemConfigService.selectAllConfig().get(key);
-                if (StringUtils.isEmpty(prefix)) continue;
-                if (!prefix.endsWith("/")) prefix += "/";   // 带上 "/" 边界，防止 cdn.x.com.evil.com 这种前缀绕过
-                if (avatar.startsWith(prefix)) allowed = true;
-            }
-            ApiAssert.isTrue(allowed, "头像地址不合法");
+            ApiAssert.isTrue(fileUtil.isOwnStorageUrl(avatar), "头像地址不合法");
             user1.setAvatar(avatar);
         }
         userService.update(user1);

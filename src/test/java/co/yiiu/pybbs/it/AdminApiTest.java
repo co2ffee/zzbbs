@@ -2,11 +2,13 @@ package co.yiiu.pybbs.it;
 
 import co.yiiu.pybbs.model.AdminUser;
 import co.yiiu.pybbs.model.Role;
+import co.yiiu.pybbs.model.Tag;
 import co.yiiu.pybbs.model.Topic;
 import co.yiiu.pybbs.model.User;
 import co.yiiu.pybbs.service.IAdminUserService;
 import co.yiiu.pybbs.service.IPermissionService;
 import co.yiiu.pybbs.service.IRoleService;
+import co.yiiu.pybbs.service.ITagService;
 import co.yiiu.pybbs.service.ITopicService;
 import co.yiiu.pybbs.util.bcrypt.BCryptPasswordEncoder;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -14,6 +16,7 @@ import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
+import java.time.LocalDate;
 import java.util.Date;
 
 import static org.hamcrest.Matchers.containsString;
@@ -41,6 +44,8 @@ public class AdminApiTest extends AbstractApiTest {
     private IPermissionService permissionService;
     @Autowired
     private ITopicService topicService;
+    @Autowired
+    private ITagService tagService;
 
     private String adminLogin(String username, String password, String captcha) throws Exception {
         return mvc.perform(post("/admin/api/login").sessionAttr("_captcha", CAPTCHA)
@@ -244,5 +249,93 @@ public class AdminApiTest extends AbstractApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(201))
                 .andExpect(jsonPath("$.description").value(containsString("读取存储桶文件列表失败")));
+    }
+
+    /**
+     * 回归：编辑标签。原来不管有没有选图标都在服务端调 upload，AWS 上传插件会返回一整串预签名 JSON 当成 icon 写库，
+     * 超出列长度导致保存必失败。现在不传 icon 就保持原样，传了只接受自己存储域名下的地址。
+     */
+    @Test
+    public void tagEdit_keepsIconWhenOmittedAndOnlyAcceptsOwnStorageUrls() throws Exception {
+        Tag tag = tagService.insertTag(unique("tagicon")).get(0);
+        String token = adminToken();
+        String id = tag.getId().toString();
+        String ok = "http://localhost:8080/static/upload/tag/new-icon.png";
+
+        // 不传 icon：保存成功，图标保持不变（原来这里必失败）
+        mvc.perform(withToken(post("/admin/tag/edit"), token).contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .param("id", id).param("name", tag.getName()).param("description", "d1").param("topicCount", "0"))
+                .andExpect(jsonPath("$.code").value(200));
+        mvc.perform(withToken(get("/admin/tag/edit").param("id", id), token))
+                .andExpect(jsonPath("$.detail.description").value("d1"))
+                .andExpect(jsonPath("$.detail.icon").doesNotExist());
+
+        // 传自己存储域名下的地址：保存
+        mvc.perform(withToken(post("/admin/tag/edit"), token).contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .param("id", id).param("name", tag.getName()).param("description", "d2").param("topicCount", "0").param("icon", ok))
+                .andExpect(jsonPath("$.code").value(200));
+        mvc.perform(withToken(get("/admin/tag/edit").param("id", id), token))
+                .andExpect(jsonPath("$.detail.icon").value(ok));
+
+        // 再次不传 icon：图标保持
+        mvc.perform(withToken(post("/admin/tag/edit"), token).contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .param("id", id).param("name", tag.getName()).param("description", "d3").param("topicCount", "0"))
+                .andExpect(jsonPath("$.code").value(200));
+        mvc.perform(withToken(get("/admin/tag/edit").param("id", id), token))
+                .andExpect(jsonPath("$.detail.icon").value(ok));
+
+        // 外部地址、超长内容拒绝
+        mvc.perform(withToken(post("/admin/tag/edit"), token).contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .param("id", id).param("name", tag.getName()).param("description", "d4").param("topicCount", "0")
+                .param("icon", "https://evil.example.com/x.png"))
+                .andExpect(jsonPath("$.code").value(201));
+    }
+
+    /** 上传地址接口：需要登录；存储桶没配置时返回明确的提示，而不是“服务器出错啦” */
+    @Test
+    public void tagUploadUrl_requiresLoginAndReportsMissingStorageConfig() throws Exception {
+        mvc.perform(get("/admin/tag/upload_url")).andExpect(status().isUnauthorized());
+        mvc.perform(withToken(get("/admin/tag/upload_url"), adminToken()))
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.description").value(containsString("获取上传地址失败")));
+    }
+
+    /** 回归：日期筛选只填一端也要生效；开始和结束填同一天要包含这一天 */
+    @Test
+    public void topicAndCommentList_dateFilters() throws Exception {
+        User author = createUser("datefilter");
+        String authorToken = loginToken(author.getUsername());
+        String title = unique("datetopic");
+        Topic topic = topicService.insert(title, "content", "", author);
+        mvc.perform(withToken(post("/api/comment"), authorToken).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"content\":\"date filter comment\",\"topicId\":\"" + topic.getId() + "\"}"))
+                .andExpect(jsonPath("$.code").value(200));
+
+        String token = adminToken();
+        String today = LocalDate.now().toString();
+        String tomorrow = LocalDate.now().plusDays(1).toString();
+        String yesterday = LocalDate.now().minusDays(1).toString();
+
+        for (String path : new String[]{"/admin/topic/list", "/admin/comment/list"}) {
+            java.util.function.BiConsumer<String, String> expect = (query, count) -> {
+                try {
+                    String url = path + "?username=" + author.getUsername() + query;
+                    String body = mvc.perform(withToken(get(url), token)).andReturn().getResponse().getContentAsString();
+                    assertEquals(path + query + " -> " + body, Integer.parseInt(count), readDetail(body).path("records").size());
+                } catch (Exception e) {
+                    throw new AssertionError(e);
+                }
+            };
+            expect.accept("", "1");                                                      // 不筛选
+            expect.accept("&startDate=" + today, "1");                                   // 只填开始日期：以前被忽略
+            expect.accept("&endDate=" + today, "1");                                     // 只填结束日期，包含当天
+            expect.accept("&startDate=" + today + "&endDate=" + today, "1");             // 同一天：以前是 No rows
+            expect.accept("&startDate=" + tomorrow, "0");
+            expect.accept("&endDate=" + yesterday, "0");
+            expect.accept("&startDate=" + yesterday + "&endDate=" + tomorrow, "1");
+            mvc.perform(withToken(get(path).param("startDate", "not-a-date"), token))
+                    .andExpect(jsonPath("$.code").value(201))
+                    .andExpect(jsonPath("$.description").value(containsString("日期格式")));
+        }
     }
 }

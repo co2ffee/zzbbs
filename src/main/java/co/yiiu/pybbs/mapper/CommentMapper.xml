@@ -35,8 +35,11 @@
         left join topic t on c.topic_id = t.id
         left join user u on u.id = c.user_id
         <where>
-            <if test="startDate != null and endDate != null">
-                c.in_time between #{startDate} and #{endDate}
+            <if test="startDate != null">
+                and c.in_time &gt;= #{startDate}
+            </if>
+            <if test="endDate != null">
+                and c.in_time &lt; #{endDate}
             </if>
             <if test="username != null">
                 and u.username = #{username}
