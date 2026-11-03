@@ -48,7 +48,7 @@ public class IndexAdminController extends BaseAdminController {
     private IUserService userService;
 
     @RequiresUser
-    @GetMapping({"/admin/", "/admin/index"})
+    @GetMapping({"/admin", "/admin/", "/admin/index"})
     public String index(Model model) {
         // 查询当天新增话题
         model.addAttribute("topic_count", topicService.countToday());
