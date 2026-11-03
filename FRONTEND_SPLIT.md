@@ -21,6 +21,7 @@
 
 - **用户端**：登录接口返回 `token`，前端存 `localStorage`，之后请求带 `token` header（`BaseApiController.getApiUser()` 读取，查 `user.token`）。token 永久有效，直到手动刷新（`GET /api/settings/refreshToken`）。
 - **管理端**：`POST /admin/api/login`（表单参数 `username`/`password`/`code`）返回 `token`，之后同样带 `token` header。新增的 `TokenAuthFilter` + `StatelessToken` 让 Shiro 支持无状态 token；`admin_user` 表有 `token` 列（迁移 `V1.22`）。
+- **用户端内容需登录后才能查看**：`LoginRequiredInterceptor` 拦截 `/api/**`，没有有效 `token` 请求头一律返回 `401 + {"code":401,"description":"请先登录"}`。不拦截的入口：`/api/login`、`/api/register`、`/api/sms_code`、`/api/mobile_login`、`/api/site`、`/api/active`、`/api/oauth/session`（以及 CORS 预检 `OPTIONS`）。开关是配置项 `site.login_required`（`application.yml`/环境变量，默认 `true`，设为 `false` 恢复游客可浏览）。`/static/**`（上传的文件）、`/common/captcha`、`/oauth/**`、`/websocket` 不在拦截范围。前端对应：除 `/login`、`/register`、`/active`、`/oauth-login`、`/logout`、`/changeLanguage` 外所有页面有路由守卫，未登录跳 `/login` 并把原地址放在路由 state 里，登录后回到原地址；任意接口返回 401 时清掉本地登录态；未登录时顶栏隐藏标签/积分榜/搜索。
 - 验证码：`GET /common/captcha`，依赖后端 session cookie，所以前端必须和后端同域（nginx 反向代理）。
 - `User.token`、`AdminUser.password`、`AdminUser.token` 都加了 `@JsonIgnore`，不会随接口泄露。
 
@@ -118,8 +119,11 @@ Java 只保留接口，已完成：
 - 数据库里的 `theme` 系统配置项还在，但已经没有作用。
 - `plugins/theme-simple-plugin` 是 Freemarker 主题插件，页面模板删除后不再适用，仓库里保留未动。
 
-## 8. 已知限制
+## 8. 测试与已知限制
 
-- 没有在带数据库的环境里做过端到端联调，只做了编译、构建和模拟后端下的页面渲染。
+- 后端有 H2 内存库 + MockMvc 的集成测试（`src/test/java/co/yiiu/pybbs/it/`），CI 里 `mvn test -DskipTests=false` 运行，不连任何线上服务。测试用的 MySQL 迁移转换见 `H2Migrations`。
+- 系统已按本文档部署上线并做过端到端验证（用户端、管理端、权限、登录后可见）。
+- 权限：代码里每个 `@RequiresPermissions` 的值必须存在于 `permission` 表（有测试覆盖）。`V1.23` 补上了原来缺失的 `role:add`、`admin_user:delete` 并授予超级管理员。新增需要权限的后台接口时，要同时加迁移。
+- 管理端注意：后台列表接口里 `deleted` 等 `tinyint(1)` 字段经 JDBC 会变成 `true/false`，前端不要用 `=== 1` 判断。话题管理列表有意包含已删除话题（显示“已删除”，可恢复/彻底删除），仪表盘“今日新增”只统计 `deleted = 0`。
 - 自带的 `plugins/theme-simple-plugin` 依赖模板主题，页面模板删除后不再适用。
 - WebSocket 的 `bind` 消息由客户端上报 `userId`，服务端未校验（沿用原有设计）。
