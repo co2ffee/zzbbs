@@ -60,16 +60,6 @@ public class CommonInterceptor implements HandlerInterceptor {
     }
 
     @Override
-    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) {
-        if (!HttpUtil.isApiRequest(request) && modelAndView != null) {
-            // TODO 这地方有安全隐患，通过这个设置，就可以在页面上获取到system_config表里的所有数据了，如果有人恶意往页面里加入一些代码，就可以拿到一些不可告人的东西。。
-            // 后面啥时候想起来了，再收拾它
-            // 2023/3/14 过滤掉了systemConfig里type为password的数据，应该能提升一丢丢的安全性吧
-            modelAndView.addObject("site", systemConfigService.selectAllConfigWithoutPassword());
-        }
-    }
-
-    @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         long start = (long) request.getAttribute("_start");
         String actionName = request.getRequestURI();

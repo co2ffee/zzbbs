@@ -52,25 +52,15 @@ public class GlobalExceptionHandler {
      * @throws Exception
      */
     @ExceptionHandler(value = Exception.class)
-    public ModelAndView defaultErrorHandler(HttpServletRequest request, HttpServletResponse response, Exception e) throws Exception {
+    public void defaultErrorHandler(HttpServletRequest request, HttpServletResponse response, Exception e) throws Exception {
         // 当报错了，又不知道啥错的时候，把下面这行代码打开，就可以看到报错的堆信息了
         e.printStackTrace();
-//        log.error(e.getMessage());
-        if (!HttpUtil.isApiRequest(request)) {
-            response.setCharacterEncoding("utf-8");
-            ModelAndView mav = new ModelAndView();
-            mav.addObject("exception", e);
-            mav.addObject("errorCode", getStatus(request));
-            mav.setViewName("theme/" + systemConfigService.selectAllConfig().get("theme").toString() + "/error");
-            return mav;
-        } else /*if (accept.contains("application/json"))*/ {
-            Result result = new Result();
-            result.setCode(201);
-            result.setDescription("服务器出错啦~");
-            response.setContentType("application/json;charset=utf-8");
-            response.getWriter().write(Optional.ofNullable(JsonUtil.objectToJson(result)).orElse(""));
-        }
-        return null;
+        // 页面都由前端 SPA 负责，后端出错统一返回 JSON
+        Result result = new Result();
+        result.setCode(201);
+        result.setDescription("服务器出错啦~");
+        response.setContentType("application/json;charset=utf-8");
+        response.getWriter().write(Optional.ofNullable(JsonUtil.objectToJson(result)).orElse(""));
     }
 
     /**
@@ -99,14 +89,9 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(value = UnauthenticatedException.class)
     @ResponseBody
-    public ResponseEntity<String> jsonErrorHandler(HttpServletRequest request, HttpServletResponse response, UnauthenticatedException e) throws IOException {
+    public ResponseEntity<String> jsonErrorHandler(HttpServletRequest request, HttpServletResponse response, UnauthenticatedException e) {
         log.error(e.getMessage());
-        if (HttpUtil.isApiRequest(request)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).contentType(MediaType.APPLICATION_JSON).build();
-        } else {
-            response.sendRedirect("/adminlogin");
-            return null;
-        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).contentType(MediaType.APPLICATION_JSON).build();
     }
 
     /**
@@ -118,17 +103,12 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(value = AuthorizationException.class)
     @ResponseBody
-    public Result jsonErrorHandler(HttpServletRequest request, HttpServletResponse response, AuthorizationException e) throws IOException {
+    public Result jsonErrorHandler(HttpServletRequest request, HttpServletResponse response, AuthorizationException e) {
         log.error(e.getMessage());
-        if (HttpUtil.isApiRequest(request)) {
-            Result result = new Result();
-            result.setCode(201);
-            result.setDescription("没有权限进行这次操作");
-            return result;
-        } else {
-            response.sendRedirect("/adminlogin");
-            return null;
-        }
+        Result result = new Result();
+        result.setCode(201);
+        result.setDescription("没有权限进行这次操作");
+        return result;
     }
 
 }

@@ -1,7 +1,10 @@
 package co.yiiu.pybbs.controller.api;
 
+import co.yiiu.pybbs.exception.ApiAssert;
+import co.yiiu.pybbs.model.Code;
 import co.yiiu.pybbs.model.User;
 import co.yiiu.pybbs.plugin.SocialPlugin;
+import co.yiiu.pybbs.service.ICodeService;
 import co.yiiu.pybbs.service.ISystemConfigService;
 import co.yiiu.pybbs.service.ITopicService;
 import co.yiiu.pybbs.service.IUserService;
@@ -41,6 +44,8 @@ public class SiteApiController extends BaseApiController {
     private ISystemConfigService systemConfigService;
     @Resource
     private SocialPlugin socialPlugin;
+    @Resource
+    private ICodeService codeService;
 
     // 搜索话题
     @GetMapping("/search")
@@ -98,5 +103,29 @@ public class SiteApiController extends BaseApiController {
         map.put("user", user);
         map.put("token", user.getToken());
         return success(map);
+    }
+
+    // 邮箱激活（邮件里的链接 /active?email=&code= 由前端页面接收后调用这里）
+    @GetMapping("/active")
+    public Result active(String email, String code) {
+        ApiAssert.notEmpty(email, "激活邮箱不能为空");
+        ApiAssert.notEmpty(code, "激活码不能为空");
+        User user = getApiUser(false);
+        if (user == null) {
+            user = userService.selectByEmail(email);
+        } else {
+            ApiAssert.isTrue(email.equals(user.getEmail()), "激活的邮箱跟当前用户帐号注册的邮箱不一致");
+        }
+        ApiAssert.notNull(user, "激活的邮箱还没有注册过，请先注册");
+        Code code1 = codeService.validateCode(user.getId(), email, null, code);
+        ApiAssert.notNull(code1, "激活链接失效或者激活码错误");
+        // 将code的状态置为已用
+        code1.setUsed(true);
+        codeService.update(code1);
+        // 修改用户的状态
+        user = userService.selectByIdWithoutCache(user.getId());
+        user.setActive(true);
+        userService.update(user);
+        return success();
     }
 }
