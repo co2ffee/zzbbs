@@ -54,6 +54,14 @@
                         </a>
                     </li>
                 </#if>
+                <#if sec.hasPermission('file:list')>
+                    <li <#if page_tab=='file'>class="active"</#if>>
+                        <a href="/admin/file/list">
+                            <i class="fa fa-folder"></i>
+                            <span>文件管理</span>
+                        </a>
+                    </li>
+                </#if>
                 <#if sec.hasPermission('user:list')>
                     <li <#if page_tab=='user'>class="active"</#if>>
                         <a href="/admin/user/list">

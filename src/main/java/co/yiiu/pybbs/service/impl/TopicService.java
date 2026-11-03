@@ -5,6 +5,7 @@ import co.yiiu.pybbs.model.Tag;
 import co.yiiu.pybbs.model.Topic;
 import co.yiiu.pybbs.model.User;
 import co.yiiu.pybbs.service.*;
+import co.yiiu.pybbs.util.FileUtil;
 import co.yiiu.pybbs.util.MyPage;
 import co.yiiu.pybbs.util.SensitiveWordUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -51,6 +52,8 @@ public class TopicService implements ITopicService {
     private INotificationService notificationService;
     @Resource
     private IndexedService indexedService;
+    @Resource
+    private FileUtil fileUtil;
 
     @Override
     public MyPage<Map<String, Object>> search(Integer pageNo, Integer pageSize, String keyword) {
@@ -197,6 +200,18 @@ public class TopicService implements ITopicService {
         indexedService.indexTopic(String.valueOf(topic.getId()), topic.getTitle(), topic.getContent());
         // 恢复（使用自定义SQL绕过@TableLogic的deleted=0过滤）
         topicMapper.restoreById(topic.getId());
+    }
+
+    // 彻底删除话题（物理删除，同时清理话题内容引用的云端文件）
+    @Override
+    public void physicalDelete(Topic topic) {
+        // 清理话题内容里引用的dljblob文件
+        List<String> keys = fileUtil.extractBackblazeKeysFromContent(topic.getContent());
+        fileUtil.deleteBackblazeObjects(keys);
+        // 删除索引
+        indexedService.deleteTopicIndex(String.valueOf(topic.getId()));
+        // 物理删除数据库记录
+        topicMapper.deletePhysicallyById(topic.getId());
     }
 
     // 根据用户id删除帖子（逻辑删除）

@@ -96,4 +96,8 @@
         update topic set deleted = 0 where id = #{id}
     </update>
 
+    <delete id="deletePhysicallyById">
+        delete from topic where id = #{id}
+    </delete>
+
 </mapper>

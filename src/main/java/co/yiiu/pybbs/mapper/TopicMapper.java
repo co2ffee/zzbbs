@@ -30,4 +30,6 @@ public interface TopicMapper extends BaseMapper<Topic> {
     Topic selectByIdForAdmin(@Param("id") Integer id);
 
     int restoreById(@Param("id") Integer id);
+
+    int deletePhysicallyById(@Param("id") Integer id);
 }

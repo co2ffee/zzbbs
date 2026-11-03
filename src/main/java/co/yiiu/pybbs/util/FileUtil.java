@@ -10,6 +10,7 @@ import java.net.URI;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +18,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +49,14 @@ import co.yiiu.pybbs.model.User;
 import co.yiiu.pybbs.service.ISystemConfigService;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.Delete;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
@@ -61,6 +72,10 @@ import software.amazon.awssdk.regions.Region;
 public class FileUtil {
 
 	private final Logger log = LoggerFactory.getLogger(FileUtil.class);
+
+	private static final String BACKBLAZE_BUCKET_NAME = "dljblob";
+	private static final String BACKBLAZE_ENDPOINT = "https://s3.us-east-005.backblazeb2.com";
+	private static final Region BACKBLAZE_REGION = Region.of("us-east-1");
 
 	@Autowired
 	private ISystemConfigService systemConfigService;
@@ -246,8 +261,6 @@ public class FileUtil {
 	public String awsBlazeUpload(MultipartFile file, String fileType, String customPath) {
 		String backBlazeKeyId = systemConfigService.selectAllConfig().get("backblaze_keyid");
 		String backBlazeKey = systemConfigService.selectAllConfig().get("backblaze_key");
-		String backBlazeBucket = systemConfigService.selectAllConfig().get("backblaze_bucket");
-		String backBlazeBucketName = "dljblob";
 		String backBlazeDomain = systemConfigService.selectAllConfig().get("backblaze_domain");
 		String fileName = StringUtil.uuid();
 		if (fileType.equalsIgnoreCase("avatar")) { // 上传头像
@@ -263,14 +276,10 @@ public class FileUtil {
 			log.error("上传类型不在处理范围内");
 		}
 
-		String endpoint = "https://s3.us-east-005.backblazeb2.com";
-
-		Region region = Region.of("us-east-1");
-
 		PresignedPutObjectRequest presigned;
 		try (S3Presigner presigner = S3Presigner.builder()
-				.endpointOverride(URI.create(endpoint))
-				.region(region)
+				.endpointOverride(URI.create(BACKBLAZE_ENDPOINT))
+				.region(BACKBLAZE_REGION)
 				.credentialsProvider(
 						StaticCredentialsProvider.create(
 								AwsBasicCredentials.create(
@@ -283,7 +292,7 @@ public class FileUtil {
 
 			PutObjectRequest objectRequest =
 					PutObjectRequest.builder()
-							.bucket(backBlazeBucketName)
+							.bucket(BACKBLAZE_BUCKET_NAME)
 							.key(fileName)
 							.build();
 
@@ -305,6 +314,102 @@ public class FileUtil {
 		log.info("fileUrl:{}", backBlazeDomain + "/" + fileName);
 
 		return JSON.toJSONString(result);
+	}
+
+	private S3Client buildBackblazeS3Client() {
+		String backBlazeKeyId = systemConfigService.selectAllConfig().get("backblaze_keyid");
+		String backBlazeKey = systemConfigService.selectAllConfig().get("backblaze_key");
+		return S3Client.builder()
+				.endpointOverride(URI.create(BACKBLAZE_ENDPOINT))
+				.region(BACKBLAZE_REGION)
+				.credentialsProvider(
+						StaticCredentialsProvider.create(
+								AwsBasicCredentials.create(backBlazeKeyId, backBlazeKey)
+						)
+				)
+				.build();
+	}
+
+	/**
+	 * 分页列出dljblob桶里的文件，供后台管理界面查看
+	 */
+	public Map<String, Object> listBackblazeObjects(String continuationToken, int maxKeys) {
+		List<Map<String, Object>> files = new ArrayList<>();
+		Map<String, Object> result = new HashMap<>();
+		try (S3Client s3Client = buildBackblazeS3Client()) {
+			ListObjectsV2Request.Builder builder = ListObjectsV2Request.builder()
+					.bucket(BACKBLAZE_BUCKET_NAME)
+					.maxKeys(maxKeys);
+			if (!StringUtils.isEmpty(continuationToken)) {
+				builder.continuationToken(continuationToken);
+			}
+			ListObjectsV2Response response = s3Client.listObjectsV2(builder.build());
+			String domain = systemConfigService.selectAllConfig().get("backblaze_domain");
+			for (S3Object obj : response.contents()) {
+				Map<String, Object> fileInfo = new HashMap<>();
+				fileInfo.put("key", obj.key());
+				fileInfo.put("size", obj.size());
+				fileInfo.put("lastModified", obj.lastModified().toString());
+				fileInfo.put("url", domain + "/" + obj.key());
+				files.add(fileInfo);
+			}
+			result.put("truncated", response.isTruncated());
+			result.put("nextContinuationToken", response.nextContinuationToken());
+		} catch (Exception e) {
+			log.error("list backblaze objects fail", e);
+			result.put("truncated", false);
+			result.put("nextContinuationToken", null);
+		}
+		result.put("files", files);
+		return result;
+	}
+
+	/**
+	 * 删除dljblob桶里的单个文件
+	 */
+	public boolean deleteBackblazeObject(String key) {
+		if (StringUtils.isEmpty(key)) return false;
+		try (S3Client s3Client = buildBackblazeS3Client()) {
+			s3Client.deleteObject(b -> b.bucket(BACKBLAZE_BUCKET_NAME).key(key));
+			return true;
+		} catch (Exception e) {
+			log.error("delete backblaze object fail: {}", key, e);
+			return false;
+		}
+	}
+
+	/**
+	 * 批量删除dljblob桶里的文件，话题物理删除时用来清理对应的云端文件
+	 */
+	public void deleteBackblazeObjects(List<String> keys) {
+		if (keys == null || keys.isEmpty()) return;
+		try (S3Client s3Client = buildBackblazeS3Client()) {
+			List<ObjectIdentifier> objectIdentifiers = keys.stream()
+					.map(key -> ObjectIdentifier.builder().key(key).build())
+					.collect(Collectors.toList());
+			s3Client.deleteObjects(DeleteObjectsRequest.builder()
+					.bucket(BACKBLAZE_BUCKET_NAME)
+					.delete(Delete.builder().objects(objectIdentifiers).build())
+					.build());
+		} catch (Exception e) {
+			log.error("batch delete backblaze objects fail: {}", keys, e);
+		}
+	}
+
+	/**
+	 * 从话题内容里提取出引用的dljblob文件key
+	 */
+	public List<String> extractBackblazeKeysFromContent(String content) {
+		List<String> keys = new ArrayList<>();
+		if (StringUtils.isEmpty(content)) return keys;
+		String domain = systemConfigService.selectAllConfig().get("backblaze_domain");
+		if (StringUtils.isEmpty(domain)) return keys;
+		Pattern pattern = Pattern.compile(Pattern.quote(domain) + "/([^\\s\"'()<>]+)");
+		Matcher matcher = pattern.matcher(content);
+		while (matcher.find()) {
+			keys.add(matcher.group(1));
+		}
+		return keys;
 	}
 
 

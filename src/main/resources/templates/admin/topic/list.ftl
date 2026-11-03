@@ -110,6 +110,11 @@
                                         </button>
                                     </#if>
                                 </#if>
+                                <#if sec.hasPermission("topic:physical_delete") && topic.deleted>
+                                    <button onclick="physicalDeleteBtn('${topic.id}')"
+                                            class="btn btn-xs btn-danger">彻底删除
+                                    </button>
+                                </#if>
                             </td>
                         </tr>
                     </#list>
@@ -158,6 +163,24 @@
             }
             if (confirm(msg)) {
                 $.get(url, function (data) {
+                    if (data.code === 200) {
+                        toast("成功", "success");
+                        setTimeout(function () {
+                            window.location.reload();
+                        }, 700);
+                    } else {
+                        toast(data.description);
+                    }
+                })
+            }
+        }
+
+        </#if>
+        <#if sec.hasPermission("topic:physical_delete")>
+
+        function physicalDeleteBtn(id) {
+            if (confirm("彻底删除后话题数据和关联的云端文件都无法恢复，确定吗？")) {
+                $.get('/admin/topic/physical_delete?id=' + id, function (data) {
                     if (data.code === 200) {
                         toast("成功", "success");
                         setTimeout(function () {

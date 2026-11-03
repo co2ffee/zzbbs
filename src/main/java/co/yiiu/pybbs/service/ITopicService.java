@@ -49,6 +49,9 @@ public interface ITopicService {
     // 恢复已删除话题
     void restore(Topic topic);
 
+    // 彻底删除话题（物理删除，同时清理话题内容引用的云端文件）
+    void physicalDelete(Topic topic);
+
     // 根据用户id删除帖子
     void deleteByUserId(Integer userId);
 

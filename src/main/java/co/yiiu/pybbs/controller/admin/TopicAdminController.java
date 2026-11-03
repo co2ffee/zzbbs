@@ -118,6 +118,17 @@ public class TopicAdminController extends BaseAdminController {
         return success();
     }
 
+    @RequiresPermissions("topic:physical_delete")
+    @GetMapping("/physical_delete")
+    @ResponseBody
+    public Result physicalDelete(Integer id) {
+        Topic topic = topicService.selectByIdForAdmin(id);
+        ApiAssert.notNull(topic, "话题不存在");
+        ApiAssert.isTrue(topic.getDeleted() == 1, "请先删除话题后再彻底删除");
+        topicService.physicalDelete(topic);
+        return success();
+    }
+
     @RequiresPermissions("topic:index")
     @GetMapping("/index")
     @ResponseBody
