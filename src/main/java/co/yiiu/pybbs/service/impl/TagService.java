@@ -1,6 +1,7 @@
 package co.yiiu.pybbs.service.impl;
 
 import co.yiiu.pybbs.mapper.TagMapper;
+import co.yiiu.pybbs.util.TodayRange;
 import co.yiiu.pybbs.model.Tag;
 import co.yiiu.pybbs.model.TopicTag;
 import co.yiiu.pybbs.service.ISystemConfigService;
@@ -63,6 +64,8 @@ public class TagService implements ITagService {
 
     @Override
     public List<Tag> selectByIds(List<Integer> ids) {
+        // in(空列表) 会让条件失效而查出所有标签
+        if (ids == null || ids.isEmpty()) return Lists.newArrayList();
         QueryWrapper<Tag> wrapper = new QueryWrapper<>();
         wrapper.lambda().in(Tag::getId, ids);
         return tagMapper.selectList(wrapper);
@@ -164,6 +167,6 @@ public class TagService implements ITagService {
     // 查询今天新增的标签数
     @Override
     public int countToday() {
-        return tagMapper.countToday();
+        return tagMapper.countToday(TodayRange.start(), TodayRange.end());
     }
 }

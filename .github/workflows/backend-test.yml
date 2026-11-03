@@ -1,0 +1,25 @@
+name: Backend tests
+
+# 后端集成测试：H2 内存库（MySQL 兼容模式）+ MockMvc，不连任何真实数据库或第三方服务。
+# 迁移脚本由测试自动转换成 H2 方言（src/test/java/co/yiiu/pybbs/it/H2Migrations.java）。
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+
+      # pom.xml 里默认 skipTests=true（保持原来打包发布的行为），这里显式打开
+      - name: Run tests
+        run: mvn -B test -DskipTests=false

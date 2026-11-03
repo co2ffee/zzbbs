@@ -358,6 +358,10 @@ public class FileUtil {
 			} while (continuationToken != null);
 		} catch (Exception e) {
 			log.error("list all backblaze objects fail", e);
+			// 原来这里吞掉异常、返回空列表，后台文件管理页就显示“0 个文件”，看不出是读取失败。
+			// 现在把失败原因告诉管理员（详细的堆栈在日志里）
+			throw new co.yiiu.pybbs.exception.ApiException("读取存储桶文件列表失败：" + e.getClass().getSimpleName()
+					+ "。常见原因是 Backblaze 的 keyId/key 没有列出文件（listFiles）的权限，详细信息见后端日志");
 		}
 		return files;
 	}

@@ -14,7 +14,7 @@
     <select id="countToday" resultType="integer">
         select count(1)
         from user
-        where in_time between curdate() and date_add(curdate(), interval 1 day)
+        where in_time &gt;= #{start} and in_time &lt; #{end}
     </select>
 
 </mapper>

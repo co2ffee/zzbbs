@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Map;
+import java.util.Date;
 
 /**
  * Created by tomoya.
@@ -16,5 +17,5 @@ public interface TagMapper extends BaseMapper<Tag> {
 
     MyPage<Map<String, Object>> selectTopicByTagId(MyPage<Map<String, Object>> iPage, @Param("tagId") Integer tagId);
 
-    int countToday();
+    int countToday(@Param("start") Date start, @Param("end") Date end);
 }

@@ -5,6 +5,7 @@ import co.yiiu.pybbs.model.Role;
 import co.yiiu.pybbs.model.Topic;
 import co.yiiu.pybbs.model.User;
 import co.yiiu.pybbs.service.IAdminUserService;
+import co.yiiu.pybbs.service.IPermissionService;
 import co.yiiu.pybbs.service.IRoleService;
 import co.yiiu.pybbs.service.ITopicService;
 import co.yiiu.pybbs.util.bcrypt.BCryptPasswordEncoder;
@@ -36,6 +37,8 @@ public class AdminApiTest extends AbstractApiTest {
     private IAdminUserService adminUserService;
     @Autowired
     private IRoleService roleService;
+    @Autowired
+    private IPermissionService permissionService;
     @Autowired
     private ITopicService topicService;
 
@@ -199,5 +202,47 @@ public class AdminApiTest extends AbstractApiTest {
                 .andExpect(jsonPath("$.code").value(200));
         mvc.perform(withToken(get("/admin/topic/edit").param("id", topic.getId().toString()), token))
                 .andExpect(jsonPath("$.detail.topic.deleted").value(1));
+    }
+
+    /**
+     * 回归（越权）：一个没有分配任何权限的角色，查出来的权限必须是空的。
+     * 原来用 in(权限id列表) 查询，列表为空时条件失效，会查出所有权限，等于“零权限角色 = 超级管理员”。
+     */
+    @Test
+    public void roleWithoutPermissions_hasNoPermissionsAtAll() {
+        String roleName = unique("emptyrole");
+        roleService.insert(roleName, new Integer[0]);
+        Integer roleId = null;
+        for (Role role : roleService.selectAll()) if (roleName.equals(role.getName())) roleId = role.getId();
+        assertTrue("角色应该创建成功", roleId != null);
+        assertEquals("没有权限的角色不应该查出任何权限", 0, permissionService.selectByRoleId(roleId).size());
+        // 对比：超级管理员（角色 1）确实有很多权限
+        assertTrue(permissionService.selectByRoleId(1).size() > 10);
+    }
+
+    /** 回归：仪表盘“今日新增”要能统计到今天刚新增的数据（原来按 MySQL 的 curdate() 算，时区不一致时全是 0） */
+    @Test
+    public void dashboard_countsContentCreatedToday() throws Exception {
+        String token = adminToken();
+        String before = mvc.perform(withToken(get("/admin/index"), token)).andReturn().getResponse().getContentAsString();
+        int topicsBefore = readDetail(before).path("topic_count").asInt();
+        int usersBefore = readDetail(before).path("user_count").asInt();
+
+        User author = createUser("today");
+        topicService.insert(unique("todaytopic"), "content", "", author);
+
+        String after = mvc.perform(withToken(get("/admin/index"), token)).andReturn().getResponse().getContentAsString();
+        assertEquals(topicsBefore + 1, readDetail(after).path("topic_count").asInt());
+        assertEquals(usersBefore + 1, readDetail(after).path("user_count").asInt());
+    }
+
+    /** 回归：读取存储桶文件列表失败时要告诉管理员原因，而不是返回空列表（页面显示“0 个文件”，看不出出错了） */
+    @Test
+    public void fileList_reportsStorageErrorInsteadOfEmptyList() throws Exception {
+        // 测试环境没有配置 Backblaze 密钥，读取一定会失败
+        mvc.perform(withToken(get("/admin/file/list"), adminToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(201))
+                .andExpect(jsonPath("$.description").value(containsString("读取存储桶文件列表失败")));
     }
 }

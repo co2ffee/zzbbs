@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Map;
+import java.util.Date;
 
 /**
  * Created by tomoya.
@@ -23,7 +24,7 @@ public interface TopicMapper extends BaseMapper<Topic> {
     MyPage<Map<String, Object>> selectAllForAdmin(MyPage<Map<String, Object>> iPage, @Param("startDate") String
             startDate, @Param("endDate") String endDate, @Param("username") String username);
 
-    int countToday();
+    int countToday(@Param("start") Date start, @Param("end") Date end);
 
     MyPage<Map<String, Object>> search(MyPage<Map<String, Object>> iPage, @Param("keyword") String keyword);
 

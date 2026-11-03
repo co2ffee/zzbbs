@@ -1,6 +1,7 @@
 package co.yiiu.pybbs.service.impl;
 
 import co.yiiu.pybbs.mapper.UserMapper;
+import co.yiiu.pybbs.util.TodayRange;
 import co.yiiu.pybbs.model.User;
 import co.yiiu.pybbs.service.*;
 import co.yiiu.pybbs.util.MyPage;
@@ -229,7 +230,7 @@ public class UserService implements IUserService {
     // 查询今天新增的话题数
     @Override
     public int countToday() {
-        return userMapper.countToday();
+        return userMapper.countToday(TodayRange.start(), TodayRange.end());
     }
 
     // 删除用户
