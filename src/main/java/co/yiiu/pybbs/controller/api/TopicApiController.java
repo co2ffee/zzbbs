@@ -72,6 +72,8 @@ public class TopicApiController extends BaseApiController {
         map.put("comments", comments);
         map.put("topicUser", topicUser);
         map.put("collects", collects);
+        // 作者的其他话题（原来详情页右侧栏的 tag_other_topic）
+        map.put("otherTopics", topicService.selectAuthorOtherTopic(topic.getUserId(), id, 5));
         return success(map);
     }
 

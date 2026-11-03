@@ -11,25 +11,16 @@ import co.yiiu.pybbs.util.Result;
 import co.yiiu.pybbs.util.bcrypt.BCryptPasswordEncoder;
 import com.sun.management.OperatingSystemMXBean;
 import org.apache.shiro.SecurityUtils;
-import org.apache.shiro.authc.AuthenticationException;
-import org.apache.shiro.authc.IncorrectCredentialsException;
-import org.apache.shiro.authc.UnknownAccountException;
-import org.apache.shiro.authc.UsernamePasswordToken;
 import org.apache.shiro.authz.annotation.RequiresUser;
-import org.apache.shiro.subject.Subject;
-import org.apache.shiro.web.util.WebUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.lang.management.ManagementFactory;
 import java.util.HashMap;
@@ -93,58 +84,10 @@ public class IndexAdminController extends BaseAdminController {
         return success(data);
     }
 
-    // 登录后台
+    // 老的后台登录页地址，管理端 SPA 迁到 /admin-ui/ 后跳转过去，保持原来的链接可用
     @GetMapping("/adminlogin")
     public String adminlogin() {
-        return "admin/login";
-    }
-
-    // 处理后台登录逻辑
-    @PostMapping("/admin/login")
-    public String adminlogin(String username, String password, String code, HttpSession session,
-                             @RequestParam(defaultValue = "0") Boolean rememberMe,
-                             HttpServletRequest request, RedirectAttributes redirectAttributes) {
-        String url = WebUtils.getSavedRequest(request) == null ? "/admin/index" : WebUtils.getSavedRequest(request).getRequestUrl();
-        String captcha = (String) session.getAttribute("_captcha");
-        if (captcha == null || StringUtils.isEmpty(code) || !captcha.equalsIgnoreCase(code)) {
-            redirectAttributes.addFlashAttribute("error", "验证码不正确");
-            redirectAttributes.addFlashAttribute("username", username);
-            url = "/adminlogin";
-        } else {
-            try {
-                // 添加用户认证信息
-                Subject subject = SecurityUtils.getSubject();
-                UsernamePasswordToken token = new UsernamePasswordToken(username, password, rememberMe);
-                //进行验证，这里可以捕获异常，然后返回对应信息
-                subject.login(token);
-            } catch (UnknownAccountException e) {
-                log.error(e.getMessage());
-                redirectAttributes.addFlashAttribute("error", "用户不存在");
-                redirectAttributes.addFlashAttribute("username", username);
-                url = "/adminlogin";
-            } catch (IncorrectCredentialsException e) {
-                log.error(e.getMessage());
-                redirectAttributes.addFlashAttribute("error", "密码错误");
-                redirectAttributes.addFlashAttribute("username", username);
-                url = "/adminlogin";
-//            } catch (LockedAccountException e) {
-//                log.error(e.getMessage());
-//                redirectAttributes.addFlashAttribute("error", "用户被锁定");
-//                redirectAttributes.addFlashAttribute("username", username);
-//                url = "/adminlogin";
-//            } catch (ExcessiveAttemptsException e) {
-//                log.error(e.getMessage());
-//                redirectAttributes.addFlashAttribute("error", "登录尝试次数过多");
-//                redirectAttributes.addFlashAttribute("username", username);
-//                url = "/adminlogin";
-            } catch (AuthenticationException e) {
-                log.error(e.getMessage());
-                redirectAttributes.addFlashAttribute("error", "用户名或密码错误");
-                redirectAttributes.addFlashAttribute("username", username);
-                url = "/adminlogin";
-            }
-        }
-        return redirect(url);
+        return redirect("/admin-ui/login");
     }
 
     // 处理后台登录逻辑（新：供token鉴权的接口消费方使用，走BCrypt手动校验，不依赖Shiro session）
@@ -170,11 +113,11 @@ public class IndexAdminController extends BaseAdminController {
     @GetMapping("/admin/logout")
     public String logout() {
         SecurityUtils.getSubject().logout();
-        return redirect("/adminlogin");
+        return redirect("/admin-ui/login");
     }
 
     @GetMapping("/admin/no_auth")
     public String noAuth() {
-        return redirect("/adminlogin");
+        return redirect("/admin-ui/login");
     }
 }

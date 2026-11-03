@@ -32,6 +32,19 @@ public class CommentApiController extends BaseApiController {
     @Resource
     private ISystemConfigService systemConfigService;
 
+    // 取单条评论，评论编辑页使用（只有评论作者本人可以取）
+    @GetMapping("/{id}")
+    public Result get(@PathVariable Integer id) {
+        User user = getApiUser();
+        Comment comment = commentService.selectById(id);
+        ApiAssert.notNull(comment, "这个评论可能已经被删除了");
+        ApiAssert.isTrue(comment.getUserId().equals(user.getId()), "请给你的权限让你编辑别人的评论？");
+        Map<String, Object> map = new java.util.HashMap<>();
+        map.put("comment", comment);
+        map.put("topic", topicService.selectById(comment.getTopicId()));
+        return success(map);
+    }
+
     // 创建评论
     @PostMapping
     public Result create(@RequestBody Map<String, String> body) {

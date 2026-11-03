@@ -5,13 +5,6 @@ spring:
     active: dev
   banner:
     location: ["classpath:banner.txt", "file:./banner.txt"]
-  freemarker:
-    suffix: .ftl
-    cache: false
-    settings:
-      template_exception_handler: rethrow
-      number_format: 0.##
-    template-loader-path: ["classpath:/templates/", "file:./templates/"]
   messages:
     basename: i18n/message
   servlet:

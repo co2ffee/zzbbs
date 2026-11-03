@@ -53,6 +53,7 @@ public class ShiroConfig {
         // 登录验证的地址不能跟打开页面的地址一样，否则shiro是先验证用户名密码，失败了才会验证验证码
         map.put("/admin/login", "anon");
         map.put("/admin/api/login", "anon");
+        map.put("/adminlogin", "anon");
         map.put("/admin/logout", "anon");
         map.put("/admin/no_auth", "anon");
 
@@ -78,12 +79,12 @@ public class ShiroConfig {
         shiroFilterFactoryBean.setFilterChainDefinitionMap(map);
 
         // 如果不设置默认会自动寻找Web工程根目录下的"/login.jsp"页面
-        shiroFilterFactoryBean.setLoginUrl("/adminlogin");
+        shiroFilterFactoryBean.setLoginUrl("/admin-ui/login");
         // 登录成功后要跳转的链接
-        shiroFilterFactoryBean.setSuccessUrl("/admin/index");
+        shiroFilterFactoryBean.setSuccessUrl("/admin-ui/");
 
         //未授权界面;
-        shiroFilterFactoryBean.setUnauthorizedUrl("/admin/no_auth");
+        shiroFilterFactoryBean.setUnauthorizedUrl("/admin-ui/login");
 
         return shiroFilterFactoryBean;
     }

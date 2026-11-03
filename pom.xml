@@ -37,11 +37,6 @@
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-freemarker</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
             <exclusions>
                 <exclusion>
@@ -227,11 +222,6 @@
             <groupId>com.backblaze.b2</groupId>
             <artifactId>b2-sdk-httpclient</artifactId>
             <version>6.1.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.volcengine</groupId>
-            <artifactId>volcengine-java-sdk-ark-runtime</artifactId>
-            <version>LATEST</version>
         </dependency>
 
         <!-- Source: https://mvnrepository.com/artifact/software.amazon.awssdk/s3 -->
