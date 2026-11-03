@@ -7,7 +7,6 @@ import co.yiiu.pybbs.util.Result;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,26 +29,25 @@ public class TagAdminController extends BaseAdminController {
 
     @RequiresPermissions("tag:list")
     @GetMapping("/list")
-    public String list(@RequestParam(defaultValue = "1") Integer pageNo, String name, Model model) {
+    @ResponseBody
+    public Result list(@RequestParam(defaultValue = "1") Integer pageNo, String name) {
         if (name != null) name = name.replace("\"", "").replace("'", "");
-//        name= SecurityUtil.sanitizeInput(name);
         if (StringUtils.isEmpty(name)) name = null;
         IPage<Tag> page = tagService.selectAll(pageNo, null, name);
-        model.addAttribute("page", page);
-        model.addAttribute("name", name);
-        return "admin/tag/list";
+        return success(page);
     }
 
     @RequiresPermissions("tag:edit")
     @GetMapping("/edit")
-    public String edit(Integer id, Model model) {
-        model.addAttribute("tag", tagService.selectById(id));
-        return "admin/tag/edit";
+    @ResponseBody
+    public Result edit(Integer id) {
+        return success(tagService.selectById(id));
     }
 
     @RequiresPermissions("tag:edit")
     @PostMapping("/edit")
-    public String update(Integer id, String name, String description, Integer topicCount, MultipartFile file) {
+    @ResponseBody
+    public Result update(Integer id, String name, String description, Integer topicCount, MultipartFile file) {
         Tag tag = tagService.selectById(id);
         tag.setName(name);
         tag.setDescription(description);
@@ -57,7 +55,7 @@ public class TagAdminController extends BaseAdminController {
         String path = fileUtil.upload(file, "avatar", "tag");
         tag.setIcon(path);
         tagService.update(tag);
-        return redirect("/admin/tag/list");
+        return success();
     }
 
     @RequiresPermissions("tag:delete")

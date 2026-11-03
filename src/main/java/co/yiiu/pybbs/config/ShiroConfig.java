@@ -2,6 +2,7 @@ package co.yiiu.pybbs.config;
 
 import co.yiiu.pybbs.config.realm.MyCredentialsMatcher;
 import co.yiiu.pybbs.config.realm.MyShiroRealm;
+import co.yiiu.pybbs.config.realm.TokenAuthFilter;
 import co.yiiu.pybbs.service.ISystemConfigService;
 import org.apache.shiro.codec.Base64;
 import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor;
@@ -20,6 +21,7 @@ import org.springframework.context.annotation.DependsOn;
 
 import javax.annotation.Resource;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -43,30 +45,35 @@ public class ShiroConfig {
         ShiroFilterFactoryBean shiroFilterFactoryBean = new ShiroFilterFactoryBean();
         shiroFilterFactoryBean.setSecurityManager(defaultWebSecurityManager);
 
-        //拦截器.
-        Map<String, String> map = new HashMap<>();
+        //拦截器. 用LinkedHashMap保证声明顺序，Shiro按声明顺序从上到下匹配，更具体的路径要排在/admin/**这种宽泛规则前面
+        Map<String, String> map = new LinkedHashMap<>();
 
         // 配置不会被拦截的链接 顺序判断  相关静态资源
         map.put("/static/**", "anon");
         // 登录验证的地址不能跟打开页面的地址一样，否则shiro是先验证用户名密码，失败了才会验证验证码
         map.put("/admin/login", "anon");
+        map.put("/admin/api/login", "anon");
         map.put("/admin/logout", "anon");
         map.put("/admin/no_auth", "anon");
 
         //<!-- 过滤链定义，从上向下顺序执行，一般将/**放在最为下边 -->:这是一个坑呢，一不小心代码就不好使了;
 
         //<!-- authc:所有url都必须认证通过才可以访问; user: 表示rememberMe后就可以访问 anon:所有url都都可以匿名访问 {@link org.apache.shiro.web.filter.mgt.DefaultFilter}-->
-        map.put("/admin/permission/**", "perms");
-        map.put("/admin/role/**", "perms");
-        map.put("/admin/system/**", "perms");
-        map.put("/admin/admin_user/**", "perms");
+        // 这里原来给permission/role/system/admin_user单独配了没带权限值的"perms"过滤器，Shiro遇到这种裸配置
+        // 会直接401，不管登没登录/有没有权限，4块页面谁都打不开。实际权限判断本来就靠各controller的
+        // @RequiresPermissions注解，所以直接去掉，让它们跟其它页面一样走下面的/admin/**
 
-        map.put("/admin/**", "user");
+        // tokenAuth：带token header就按无状态方式认证，不带就直接放行给user过滤器走原有session/cookie流程，两条路径并存
+        map.put("/admin/**", "tokenAuth, user");
 //        map.put("/admin/comment/**", "user");
 //        map.put("/admin/sensitive_word/**", "user");
 //        map.put("/admin/tag/**", "user");
 //        map.put("/admin/topic/**", "user");
 //        map.put("/admin/user/**", "user");
+
+        Map<String, javax.servlet.Filter> filters = new HashMap<>();
+        filters.put("tokenAuth", new TokenAuthFilter());
+        shiroFilterFactoryBean.setFilters(filters);
 
         shiroFilterFactoryBean.setFilterChainDefinitionMap(map);
 

@@ -8,11 +8,11 @@ import co.yiiu.pybbs.util.MyPage;
 import co.yiiu.pybbs.util.Result;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -31,30 +31,26 @@ public class CommentAdminController extends BaseAdminController {
 
     @RequiresPermissions("comment:list")
     @GetMapping("/list")
-    public String list(@RequestParam(defaultValue = "1") Integer pageNo, String startDate, String endDate, String username, Model model) {
+    @ResponseBody
+    public Result list(@RequestParam(defaultValue = "1") Integer pageNo, String startDate, String endDate, String username) {
         if (username != null) username = username.replace("\"", "").replace("'", "");
-//        startDate= SecurityUtil.sanitizeInput(startDate);
-//        endDate= SecurityUtil.sanitizeInput(endDate);
-//        username=SecurityUtil.sanitizeInput(username);
         if (StringUtils.isEmpty(startDate)) startDate = null;
         if (StringUtils.isEmpty(endDate)) endDate = null;
         if (StringUtils.isEmpty(username)) username = null;
         MyPage<Map<String, Object>> page = commentService.selectAllForAdmin(pageNo, startDate, endDate, username);
-        model.addAttribute("page", page);
-        model.addAttribute("startDate", startDate);
-        model.addAttribute("endDate", endDate);
-        model.addAttribute("username", username);
-        return "admin/comment/list";
+        return success(page);
     }
 
     @RequiresPermissions("comment:edit")
     @GetMapping("/edit")
-    public String edit(Integer id, Model model) {
+    @ResponseBody
+    public Result edit(Integer id) {
         Comment comment = commentService.selectByIdForAdmin(id);
         Topic topic = topicService.selectByIdForAdmin(comment.getTopicId());
-        model.addAttribute("comment", comment);
-        model.addAttribute("topic", topic);
-        return "admin/comment/edit";
+        Map<String, Object> data = new HashMap<>();
+        data.put("comment", comment);
+        data.put("topic", topic);
+        return success(data);
     }
 
     @RequiresPermissions("comment:edit")

@@ -14,6 +14,12 @@ public interface IAdminUserService {
     // 根据用户名查询用户
     AdminUser selectByUsername(String username);
 
+    // 根据token查询用户
+    AdminUser selectByToken(String token);
+
+    // 生成一个不重复的token
+    String generateToken();
+
     // 查询所有的后台用户
     List<Map<String, Object>> selectAll();
 

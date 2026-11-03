@@ -12,12 +12,12 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Whitelist;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -40,29 +40,28 @@ public class TopicAdminController extends BaseAdminController {
 
     @RequiresPermissions("topic:list")
     @GetMapping("/list")
-    public String list(@RequestParam(defaultValue = "1") Integer pageNo, String startDate, String endDate, String username, Model model) {
+    @ResponseBody
+    public Result list(@RequestParam(defaultValue = "1") Integer pageNo, String startDate, String endDate, String username) {
         if (username != null) username = username.replace("\"", "").replace("'", "");
         if (StringUtils.isEmpty(startDate)) startDate = null;
         if (StringUtils.isEmpty(endDate)) endDate = null;
         if (StringUtils.isEmpty(username)) username = null;
         MyPage<Map<String, Object>> page = topicService.selectAllForAdmin(pageNo, startDate, endDate, username);
-        model.addAttribute("page", page);
-        model.addAttribute("startDate", startDate);
-        model.addAttribute("endDate", endDate);
-        model.addAttribute("username", username);
-        return "admin/topic/list";
+        return success(page);
     }
 
     @RequiresPermissions("topic:edit")
     @GetMapping("/edit")
-    public String edit(Integer id, Model model) {
-        model.addAttribute("topic", topicService.selectByIdForAdmin(id));
+    @ResponseBody
+    public Result edit(Integer id) {
         // 将标签集合转成逗号隔开的字符串
         List<Tag> tagList = tagService.selectByTopicId(id);
         String tags = StringUtils.collectionToCommaDelimitedString(tagList.stream().map(Tag::getName).collect(Collectors
                 .toList()));
-        model.addAttribute("tags", tags);
-        return "admin/topic/edit";
+        Map<String, Object> data = new HashMap<>();
+        data.put("topic", topicService.selectByIdForAdmin(id));
+        data.put("tags", tags);
+        return success(data);
     }
 
     @RequiresPermissions("topic:edit")
