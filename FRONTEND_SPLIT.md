@@ -90,7 +90,8 @@ nginx 示例见 `zzbbs-forum-web/deploy/nginx-forum.conf.example`。要点：
 
 - `/` 指向用户端静态目录，`try_files $uri $uri/ /index.html`。
 - 转给后端的路径：`api|common|static|oauth|admin|adminlogin|active|bot` 以及 `/websocket`（带 websocket 升级头）。注意 `active` 现在由用户端处理，**不要**再转给后端。
-- 管理端 `location ^~ /admin-ui/`（必须用 `^~`，否则会被上面带 `admin` 的正则抢走）。
+- 管理端 `location ^~ /admin-ui/`（用 `^~` 保证优先于正则）。
+- 原有的 `location /api/upload` 必须改成 `location ^~ /api/upload`，否则会被转给后端的 `^/(api|...)` 正则抢走，大文件上传的 size/timeout 设置失效。
 - `nginx -t` 通过后再 `nginx -s reload`。
 
 建议上线顺序：先部署并验证管理端 → 再部署用户端 → 最后上线新版后端。新版后端上线后，旧的 Freemarker 页面会消失。
