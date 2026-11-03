@@ -2,6 +2,10 @@ server:
   port: 8089
   # 在 nginx 后面：识别 X-Forwarded-Proto/Host，重定向的 Location 才是 https://域名 而不是内网地址
   forward-headers-strategy: native
+  servlet:
+    session:
+      # 只用 Cookie 跟踪会话，否则重定向地址后面会被追加 ;jsessionid=xxx（比如 /adminlogin 的 302）
+      tracking-modes: cookie
 spring:
   profiles:
     active: dev

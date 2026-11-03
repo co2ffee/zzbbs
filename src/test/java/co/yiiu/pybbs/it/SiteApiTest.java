@@ -68,6 +68,19 @@ public class SiteApiTest extends AbstractApiTest {
                 .andExpect(redirectedUrl("/admin-ui/login"));
     }
 
+    /** 验证码接口：明确的 image/gif、不缓存，并且把验证码写进 session（登录接口靠它校验） */
+    @Test
+    public void captcha_isGifNotCachedAndStoredInSession() throws Exception {
+        org.springframework.test.web.servlet.MvcResult result = mvc.perform(get("/common/captcha"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/gif"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Cache-Control", containsString("no-store")))
+                .andReturn();
+        org.junit.Assert.assertTrue("应该返回图片内容", result.getResponse().getContentAsByteArray().length > 100);
+        org.junit.Assert.assertNotNull("验证码要写进 session", result.getRequest().getSession().getAttribute("_captcha"));
+    }
+
     /** 回归：未登录访问 /admin/** 应该是 401 + JSON，而不是 302 到登录页 */
     @Test
     public void adminApi_withoutToken_returns401Json() throws Exception {

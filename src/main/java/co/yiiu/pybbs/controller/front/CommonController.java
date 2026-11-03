@@ -28,6 +28,10 @@ public class CommonController extends BaseApiController {
     // gif 验证码
     @GetMapping("/captcha")
     public void captcha(HttpServletResponse response, HttpSession session) throws IOException {
+        // 响应头要在写出图片内容之前设置：明确是 gif，并且不允许缓存（验证码每次都不一样）
+        response.setContentType("image/gif");
+        response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
         Captcha captcha = new GifCaptcha();
         captcha.out(response.getOutputStream());
         String text = captcha.text();
