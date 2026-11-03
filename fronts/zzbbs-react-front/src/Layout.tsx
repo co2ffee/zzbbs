@@ -16,7 +16,7 @@ export default function Layout() {
       <AppBar position="sticky" elevation={1}>
         <Toolbar>
           <Typography variant="h6" component={RouterLink} to="/" sx={{ color: 'inherit', textDecoration: 'none', mr: 3 }}>
-            PyBBS
+            ZZBBS
           </Typography>
           <Button color="inherit" component={RouterLink} to="/tags">标签</Button>
           <Box sx={{ flexGrow: 1 }} />

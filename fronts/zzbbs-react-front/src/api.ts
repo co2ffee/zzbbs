@@ -5,7 +5,7 @@ export interface ApiResult<T = any> {
   detail: T
 }
 
-const TOKEN_KEY = 'pybbs_token'
+const TOKEN_KEY = 'zzbbs_token'
 export const getToken = () => localStorage.getItem(TOKEN_KEY) || ''
 export const setToken = (t: string | null) =>
   t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY)

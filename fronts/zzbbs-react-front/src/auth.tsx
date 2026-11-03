@@ -11,7 +11,7 @@ interface AuthCtx {
 const Ctx = createContext<AuthCtx>(null as any)
 export const useAuth = () => useContext(Ctx)
 
-const USER_KEY = 'pybbs_user'
+const USER_KEY = 'zzbbs_user'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
