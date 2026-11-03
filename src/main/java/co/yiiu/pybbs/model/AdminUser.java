@@ -2,6 +2,7 @@ package co.yiiu.pybbs.model;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -17,9 +18,12 @@ public class AdminUser implements Serializable {
     @TableId(type = IdType.AUTO)
     private Integer id;
     private String username;
+    @JsonIgnore
     private String password;
     private Date inTime;
     private Integer roleId;
+    @JsonIgnore
+    private String token;
 
     public Integer getId() {
         return id;
@@ -59,5 +63,13 @@ public class AdminUser implements Serializable {
 
     public void setRoleId(Integer roleId) {
         this.roleId = roleId;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 }

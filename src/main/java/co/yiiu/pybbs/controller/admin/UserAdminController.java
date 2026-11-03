@@ -8,7 +8,6 @@ import co.yiiu.pybbs.util.bcrypt.BCryptPasswordEncoder;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,21 +28,19 @@ public class UserAdminController extends BaseAdminController {
     // 前台用户管理
     @RequiresPermissions("user:list")
     @GetMapping("/list")
-    public String list(@RequestParam(defaultValue = "1") Integer pageNo, String username, Model model) {
+    @ResponseBody
+    public Result list(@RequestParam(defaultValue = "1") Integer pageNo, String username) {
         if (username != null) username = username.replace("\"", "").replace("'", "");
-//        username= SecurityUtil.sanitizeInput(username);
         IPage<User> iPage = userService.selectAll(pageNo, username);
-        model.addAttribute("page", iPage);
-        model.addAttribute("username", username);
-        return "admin/user/list";
+        return success(iPage);
     }
 
     // 编辑用户
     @RequiresPermissions("user:edit")
     @GetMapping("/edit")
-    public String edit(Integer id, Model model) {
-        model.addAttribute("user", userService.selectByIdNoCatch(id));
-        return "admin/user/edit";
+    @ResponseBody
+    public Result edit(Integer id) {
+        return success(userService.selectByIdNoCatch(id));
     }
 
     // 保存编辑后的用户信息

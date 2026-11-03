@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Created by tomoya.
@@ -29,6 +30,24 @@ public class AdminUserService implements IAdminUserService {
         QueryWrapper<AdminUser> wrapper = new QueryWrapper<>();
         wrapper.lambda().eq(AdminUser::getUsername, username);
         return adminUserMapper.selectOne(wrapper);
+    }
+
+    // 根据token查询用户
+    @Override
+    public AdminUser selectByToken(String token) {
+        QueryWrapper<AdminUser> wrapper = new QueryWrapper<>();
+        wrapper.lambda().eq(AdminUser::getToken, token);
+        return adminUserMapper.selectOne(wrapper);
+    }
+
+    // 递归生成token，防止token重复
+    @Override
+    public String generateToken() {
+        String token = UUID.randomUUID().toString();
+        if (this.selectByToken(token) != null) {
+            return this.generateToken();
+        }
+        return token;
     }
 
     // 查询所有的后台用户

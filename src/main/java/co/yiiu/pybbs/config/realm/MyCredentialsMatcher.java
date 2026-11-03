@@ -14,6 +14,10 @@ public class MyCredentialsMatcher implements CredentialsMatcher {
 
     @Override
     public boolean doCredentialsMatch(AuthenticationToken token, AuthenticationInfo info) {
+        // 无状态token header认证：能在Realm里查到对应的AdminUser就已经证明token有效，不需要再比对一次
+        if (token instanceof StatelessToken) {
+            return true;
+        }
         // 大坑！！！！！！！！！！！！！！！！！！！
         // 明明token跟info两个对象的里的Credentials类型都是Object，断点看到的类型都是 char[]
         // 但是！！！！！ token里转成String要先强转成 char[]

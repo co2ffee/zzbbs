@@ -59,12 +59,25 @@ public class MyShiroRealm extends AuthorizingRealm {
     // 组装用户信息
     @Override
     protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
+        // 无状态token header认证（配合TokenAuthFilter），principal还是用户名，这样下面doGetAuthorizationInfo不用改
+        if (token instanceof StatelessToken) {
+            String tokenValue = (String) token.getCredentials();
+            AdminUser adminUser = adminUserService.selectByToken(tokenValue);
+            if (adminUser == null) throw new UnknownAccountException();
+            return new SimpleAuthenticationInfo(adminUser.getUsername(), tokenValue, getName());
+        }
         String username = (String) token.getPrincipal();
         log.info("用户：{} 正在登录...", username);
         AdminUser adminUser = adminUserService.selectByUsername(username);
         // 如果用户不存在，则抛出未知用户的异常
         if (adminUser == null) throw new UnknownAccountException();
         return new SimpleAuthenticationInfo(username, adminUser.getPassword(), getName());
+    }
+
+    // 默认只support UsernamePasswordToken，这里加上StatelessToken，否则TokenAuthFilter传进来的token会被Realm直接拒绝
+    @Override
+    public boolean supports(AuthenticationToken token) {
+        return token instanceof UsernamePasswordToken || token instanceof StatelessToken;
     }
 
 }

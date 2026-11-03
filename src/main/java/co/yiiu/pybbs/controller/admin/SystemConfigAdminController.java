@@ -7,7 +7,6 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -33,9 +32,9 @@ public class SystemConfigAdminController extends BaseAdminController {
 
     @RequiresPermissions("system:edit")
     @GetMapping("/edit")
-    public String edit(Model model) {
-        model.addAttribute("systems", systemConfigService.selectAll());
-        return "admin/system/edit";
+    @ResponseBody
+    public Result edit() {
+        return success(systemConfigService.selectAll());
     }
 
     @RequiresPermissions("system:edit")

@@ -7,7 +7,6 @@ import co.yiiu.pybbs.service.IRoleService;
 import co.yiiu.pybbs.util.Result;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,7 +14,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.annotation.Resource;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -36,42 +37,46 @@ public class RoleAdminController extends BaseAdminController {
 
     @RequiresPermissions("role:list")
     @GetMapping("/list")
-    public String list(Model model) {
-        model.addAttribute("roles", roleService.selectAll());
-        return "admin/role/list";
+    @ResponseBody
+    public Result list() {
+        return success(roleService.selectAll());
     }
 
     @RequiresPermissions("role:add")
     @GetMapping("/add")
-    public String add(Model model) {
+    @ResponseBody
+    public Result add() {
         // 查询所有的权限
-        model.addAttribute("permissions", permissionService.selectAll());
-        return "admin/role/add";
+        return success(permissionService.selectAll());
     }
 
     @RequiresPermissions("role:add")
     @PostMapping("/add")
-    public String save(String name, Integer[] permissionIds) {
+    @ResponseBody
+    public Result save(String name, Integer[] permissionIds) {
         roleService.insert(name, permissionIds);
-        return redirect("/admin/role/list");
+        return success();
     }
 
     @RequiresPermissions("role:edit")
     @GetMapping("/edit")
-    public String edit(Integer id, Model model) {
-        model.addAttribute("role", roleService.selectById(id));
+    @ResponseBody
+    public Result edit(Integer id) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("role", roleService.selectById(id));
         // 查询当前角色关联的权限
-        model.addAttribute("currentPermissions", permissionService.selectByRoleId(id));
+        data.put("currentPermissions", permissionService.selectByRoleId(id));
         // 查询所有的权限
-        model.addAttribute("permissions", permissionService.selectAll());
-        return "admin/role/edit";
+        data.put("permissions", permissionService.selectAll());
+        return success(data);
     }
 
     @RequiresPermissions("role:edit")
     @PostMapping("/edit")
-    public String update(Integer id, String name, Integer[] permissionIds) {
+    @ResponseBody
+    public Result update(Integer id, String name, Integer[] permissionIds) {
         roleService.update(id, name, permissionIds);
-        return redirect("/admin/role/list");
+        return success();
     }
 
     @RequiresPermissions("role:delete")

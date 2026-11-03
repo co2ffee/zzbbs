@@ -5,14 +5,15 @@ import co.yiiu.pybbs.service.IPermissionService;
 import co.yiiu.pybbs.util.Result;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.annotation.Resource;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by tomoya.
@@ -28,18 +29,20 @@ public class PermissionAdminController extends BaseAdminController {
 
     @RequiresPermissions("permission:list")
     @GetMapping("/list")
-    public String list(Integer pid, Model model) {
+    @ResponseBody
+    public Result list(Integer pid) {
         List<Permission> permissions = permissionService.selectByPid(0);
-        model.addAttribute("permissions", permissions);
         List<Permission> childPermissions;
         if (pid == null || pid == 0) {
             childPermissions = permissionService.selectByPid(permissions.get(0).getId());
         } else {
             childPermissions = permissionService.selectByPid(pid);
         }
-        model.addAttribute("childPermissions", childPermissions);
-        model.addAttribute("pid", pid);
-        return "admin/permission/list";
+        Map<String, Object> data = new HashMap<>();
+        data.put("permissions", permissions);
+        data.put("childPermissions", childPermissions);
+        data.put("pid", pid);
+        return success(data);
     }
 
     @RequiresPermissions("permission:add")

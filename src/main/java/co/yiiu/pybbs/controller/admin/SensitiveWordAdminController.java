@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -35,11 +34,9 @@ public class SensitiveWordAdminController extends BaseAdminController {
 
     @RequiresPermissions("sensitive_word:list")
     @GetMapping("/list")
-    public String list(@RequestParam(defaultValue = "1") Integer pageNo, String word, Model model) {
-//        word= SecurityUtil.sanitizeInput(word);
-        model.addAttribute("page", sensitiveWordService.page(pageNo, word));
-        model.addAttribute("word", word);
-        return "admin/sensitive_word/list";
+    @ResponseBody
+    public Result list(@RequestParam(defaultValue = "1") Integer pageNo, String word) {
+        return success(sensitiveWordService.page(pageNo, word));
     }
 
     @RequiresPermissions("sensitive_word:add")
