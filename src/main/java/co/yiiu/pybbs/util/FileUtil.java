@@ -201,8 +201,8 @@ public class FileUtil {
 			//默认不指定key的情况下，以文件内容的hash值作为文件名
 			String key = fileName;
 			String upToken = auth.uploadToken(qiniuBucket, key);
-			log.info("qiniuKey:{},qiniuSecret:{},qiniuBucket:{},qiniuDomain:{}", qiniuKey, qiniuSecret, qiniuBucket, qiniuDomain);
-			log.info("key:{},upToken:{}", key, upToken);
+			// 注意：不要把 qiniuKey / qiniuSecret / upToken 这类凭据写进日志
+			log.info("qiniu upload, bucket:{}, domain:{}, key:{}", qiniuBucket, qiniuDomain, key);
 			Response response = uploadManager.put(file.getInputStream(), key, upToken, null, null);
 			log.info("url:{}", qiniuDomain + "/" + fileName);
 			//response.bodyString(): {"hash":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH","key":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH"}
@@ -233,7 +233,8 @@ public class FileUtil {
 						.create(backBlazeKeyId, backBlazeKey, "b2_4j/0.0.1")) {
 					//默认不指定key的情况下，以文件内容的hash值作为文件名
 //                String key = fileName;
-					log.info("backBlazeKeyId:{},backBlazeKey:{},backBlazeBucket:{},backBlazeDomain:{}", backBlazeKeyId, backBlazeKey, backBlazeBucket, backBlazeDomain);
+					// 注意：不要把 backBlazeKeyId / backBlazeKey 这类凭据写进日志
+					log.info("backblaze upload, bucket:{}, domain:{}", backBlazeBucket, backBlazeDomain);
 //                    B2ContentSource source = B2ByteArrayContentSource.build(file.getBytes());
 					B2ContentSource source = B2FileContentSource.build(diskFile);
 					B2UploadFileRequest request = B2UploadFileRequest
@@ -310,7 +311,7 @@ public class FileUtil {
 		result.put("uploadUrl", presigned.url().toString());
 		result.put("fileUrl", backBlazeDomain + "/" + fileName);
 
-		log.info("uploadUrl:{}", presigned.url());
+		// 预签名地址带有 X-Amz-Credential / X-Amz-Signature，不能写进日志，只记录最终的访问地址
 		log.info("fileUrl:{}", backBlazeDomain + "/" + fileName);
 
 		return JSON.toJSONString(result);
@@ -461,5 +462,21 @@ public class FileUtil {
 
 			System.out.println(presignedRequest.url());
 		}
+	}
+
+	/**
+	 * 是不是自己存储域名（backblaze_domain / static_url）下的地址。
+	 * 用来校验前端直传后提交上来的头像、标签图标等地址，避免被写入任意外部地址。
+	 * 前缀判断带 "/" 边界，防止 cdn.example.com.evil.com 这种绕过。
+	 */
+	public boolean isOwnStorageUrl(String url) {
+		if (StringUtils.isEmpty(url)) return false;
+		for (String key : new String[]{"backblaze_domain", "static_url"}) {
+			String prefix = systemConfigService.selectAllConfig().get(key);
+			if (StringUtils.isEmpty(prefix)) continue;
+			if (!prefix.endsWith("/")) prefix += "/";
+			if (url.startsWith(prefix)) return true;
+		}
+		return false;
 	}
 }

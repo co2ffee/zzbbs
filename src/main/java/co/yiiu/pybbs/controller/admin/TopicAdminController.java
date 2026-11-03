@@ -7,6 +7,7 @@ import co.yiiu.pybbs.service.IIndexedService;
 import co.yiiu.pybbs.service.ITagService;
 import co.yiiu.pybbs.service.ITopicService;
 import co.yiiu.pybbs.util.MyPage;
+import co.yiiu.pybbs.util.DateUtil;
 import co.yiiu.pybbs.util.Result;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.jsoup.Jsoup;
@@ -43,8 +44,9 @@ public class TopicAdminController extends BaseAdminController {
     @ResponseBody
     public Result list(@RequestParam(defaultValue = "1") Integer pageNo, String startDate, String endDate, String username) {
         if (username != null) username = username.replace("\"", "").replace("'", "");
-        if (StringUtils.isEmpty(startDate)) startDate = null;
-        if (StringUtils.isEmpty(endDate)) endDate = null;
+        // 只填一端也要生效；结束日期包含当天（SQL 里是 < 结束日期的后一天 00:00）
+        startDate = StringUtils.isEmpty(startDate) ? null : DateUtil.dayBoundary(startDate, 0);
+        endDate = StringUtils.isEmpty(endDate) ? null : DateUtil.dayBoundary(endDate, 1);
         if (StringUtils.isEmpty(username)) username = null;
         MyPage<Map<String, Object>> page = topicService.selectAllForAdmin(pageNo, startDate, endDate, username);
         return success(page);
