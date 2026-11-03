@@ -65,7 +65,7 @@ public class ShiroConfig {
         // @RequiresPermissions注解，所以直接去掉，让它们跟其它页面一样走下面的/admin/**
 
         // tokenAuth：带token header就按无状态方式认证，不带就直接放行给user过滤器走原有session/cookie流程，两条路径并存
-        map.put("/admin/**", "tokenAuth, user");
+        map.put("/admin/**", "tokenAuth, apiUser");
 //        map.put("/admin/comment/**", "user");
 //        map.put("/admin/sensitive_word/**", "user");
 //        map.put("/admin/tag/**", "user");
@@ -74,6 +74,8 @@ public class ShiroConfig {
 
         Map<String, javax.servlet.Filter> filters = new HashMap<>();
         filters.put("tokenAuth", new TokenAuthFilter());
+        // 未登录返回 401 JSON（替换默认的 user 过滤器的 302 跳转）
+        filters.put("apiUser", new co.yiiu.pybbs.config.realm.ApiUserFilter());
         shiroFilterFactoryBean.setFilters(filters);
 
         shiroFilterFactoryBean.setFilterChainDefinitionMap(map);
