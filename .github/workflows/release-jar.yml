@@ -23,7 +23,7 @@ jobs:
         run: mvn -B clean package -DskipTests
 
       - name: Rename jar for stable download url
-        run: cp target/pybbs-*.jar pybbs.jar
+        run: cp target/pybbs.jar pybbs.jar
 
       - name: Publish rolling release
         env:
