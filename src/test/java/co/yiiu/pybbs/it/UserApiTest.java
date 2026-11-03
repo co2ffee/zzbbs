@@ -212,6 +212,7 @@ public class UserApiTest extends AbstractApiTest {
                 .andExpect(jsonPath("$.code").value(200)).andReturn().getResponse().getContentAsString();
         int topicId = readDetail(created).path("id").asInt();
         int start = readDetail(created).path("view").asInt();
+        assertEquals("新话题的浏览数从 0 开始", 0, start);
 
         mvc.perform(get("/api/topic/" + topicId)).andExpect(jsonPath("$.detail.topic.view").value(start + 1));
         mvc.perform(get("/api/topic/" + topicId).param("countView", "false"))
@@ -239,5 +240,30 @@ public class UserApiTest extends AbstractApiTest {
         }
         // 已有的行为保持不变：标签不存在
         mvc.perform(get("/api/tag/no-such-tag-zz")).andExpect(jsonPath("$.code").value(201));
+    }
+
+    /** 头像：只接受自己存储域名下的地址，保存后用户资料里能读到 */
+    @Test
+    public void settings_avatarOnlyAcceptsOwnStorageUrls() throws Exception {
+        User user = createUser("avatar");
+        String token = loginToken(user.getUsername());
+        String ok = "http://localhost:8080/static/upload/avatar/" + user.getUsername() + "/new.png";
+
+        mvc.perform(withToken(put("/api/settings"), token).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"bio\":\"b\",\"avatar\":\"" + ok + "\"}"))
+                .andExpect(jsonPath("$.code").value(200));
+        mvc.perform(withToken(get("/api/settings"), token)).andExpect(jsonPath("$.detail.avatar").value(ok));
+
+        // 外部地址、以及“前缀看起来像但域名不同”的地址都要拒绝
+        for (String bad : new String[]{"https://evil.example.com/a.png", "http://localhost:8080/static/upload.evil.com/a.png",
+                "javascript:alert(1)"}) {
+            mvc.perform(withToken(put("/api/settings"), token).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"bio\":\"b\",\"avatar\":\"" + bad + "\"}"))
+                    .andExpect(jsonPath("$.code").value(201));
+        }
+        // 不传 avatar：保持原来的头像不变
+        mvc.perform(withToken(put("/api/settings"), token).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"bio\":\"only bio\"}")).andExpect(jsonPath("$.code").value(200));
+        mvc.perform(withToken(get("/api/settings"), token)).andExpect(jsonPath("$.detail.avatar").value(ok));
     }
 }
