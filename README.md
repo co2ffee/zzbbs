@@ -10,14 +10,17 @@
 
 ### Overview
 
-PyBBS is a practical BBS (Bulletin Board System) forum built with Java. It provides a full-featured community platform with a front-end for users, an admin panel for management, and a REST API. The system supports rich content editing, tag-based topic organization, a user score/reputation system, real-time notifications via WebSocket, multi-language (I18N) support, and a plugin architecture for extensibility.
+PyBBS is a practical BBS (Bulletin Board System) forum built with Java. It provides a full-featured community platform. The project is split into a **JSON-only Java backend** and **two independent React front-ends** — one for users and one for the admin panel — so the backend no longer renders any HTML pages. The system supports rich content editing, tag-based topic organization, a user score/reputation system, real-time notifications via WebSocket, multi-language (I18N) support, and a plugin architecture for extensibility.
 
 ### Access
 
-| Page | URL | Credentials |
-|------|-----|-------------|
-| Forum | `http://localhost:8080/` | Register yourself |
-| Admin Panel | `http://localhost:8080/adminlogin` | `admin` / `123123` |
+| Page | URL (local development) | Credentials |
+|------|-------------------------|-------------|
+| Backend API | `http://localhost:8089/` (port set in `application.yml`) | — |
+| Forum front-end | `http://localhost:3000/` | Register yourself |
+| Admin front-end | `http://localhost:3001/login` | `admin` / `123123` |
+
+In production the two front-ends are static files served by nginx: the forum at `/`, the admin panel at `/admin-ui/`, with the API paths proxied to the backend. The legacy `/adminlogin` address redirects to `/admin-ui/login`. See [Front-end / back-end split](#front-end--back-end-split).
 
 ### Tech Stack
 
@@ -26,7 +29,7 @@ PyBBS is a practical BBS (Bulletin Board System) forum built with Java. It provi
 | Framework | Spring Boot 2.2.2 + Undertow |
 | ORM | MyBatis-Plus 3.0.7 |
 | Auth | Apache Shiro |
-| Template | Freemarker |
+| Front-ends | React + Vite + TypeScript + MUI (separate repositories) |
 | Database | MySQL 5.7 |
 | Cache | Redis (Jedis) |
 | Search | Elasticsearch 6.5.3 |
@@ -54,7 +57,7 @@ PyBBS is a practical BBS (Bulletin Board System) forum built with Java. It provi
 - **RBAC Permissions** — Role-based access control for the admin panel (super-admin, reviewer roles)
 - **I18N** — Chinese (zh_CN) and English (en_US) built in
 - **Plugin Architecture** — Spring AOP-based plugin system; zero intrusion into core code
-- **Theme Support** — Pluggable theme system; `default` theme built in
+- **Separate Front-ends** — Forum and admin panel are independent React apps; the backend only serves JSON
 - **Docker Support** — Ready-to-use `Dockerfile` and `docker-compose.yml`
 
 ### Project Structure
@@ -64,24 +67,37 @@ pybbs/
 ├── src/main/java/co/yiiu/pybbs/
 │   ├── config/          # Spring, Shiro, WebSocket, DataSource configs
 │   ├── controller/
-│   │   ├── admin/       # Admin panel controllers
-│   │   ├── api/         # REST API controllers
-│   │   └── front/       # Front-end page controllers
+│   │   ├── admin/       # Admin JSON endpoints (/admin/**, token auth)
+│   │   ├── api/         # User-facing JSON endpoints (/api/**)
+│   │   └── front/       # Captcha (/common) and OAuth redirect/callback (/oauth)
 │   ├── service/         # Business logic (topic, comment, user, tag …)
-│   ├── directive/       # Freemarker custom directives
 │   ├── plugin/          # Plugin integration (Redis, etc.)
 │   └── util/            # Utilities (MD5, Markdown, Captcha, IP …)
 ├── src/main/resources/
-│   ├── templates/       # Freemarker templates (theme/default)
-│   ├── static/          # CSS, JS, images
-│   ├── db/migration/    # Flyway SQL migrations (V1 → V1.20)
+│   ├── db/migration/    # Flyway SQL migrations (V1 → V1.22)
 │   └── i18n/            # Message bundles (zh_CN, en_US)
-├── plugins/             # Optional AOP plugins & theme plugins
+├── plugins/             # Optional AOP plugins
+├── fronts/              # Placeholder; the front-ends live in their own repositories
+├── FRONTEND_SPLIT.md    # Front-end / back-end split: URLs, APIs, deployment
 ├── docs/                # Project documentation (AsciiDoc / Maven Site)
 ├── Dockerfile
 ├── docker-compose.yml
 └── pom.xml
 ```
+
+### Front-end / back-end split
+
+| Repository | What it is | Served at |
+|------------|------------|-----------|
+| [`co2ffee/zzbbs`](https://github.com/co2ffee/zzbbs) (this repo) | Java backend: JSON APIs, captcha, OAuth callback, WebSocket | backend port |
+| [`co2ffee/zzbbs-forum-web`](https://github.com/co2ffee/zzbbs-forum-web) | Forum front-end (React + Vite + MUI) | `/` |
+| [`co2ffee/zzbbs-admin-web`](https://github.com/co2ffee/zzbbs-admin-web) | Admin front-end (React + Vite + MUI + DataGrid) | `/admin-ui/` |
+
+- The forum front-end keeps the original page URLs (`/topic/{id}`, `/topic/edit/{id}`, `/user/{username}/topics` …).
+- Auth is a `token` HTTP header for both front-ends; there is no server-side session for pages any more.
+- Each front-end repository builds a static package on push to `main` and publishes it to a rolling `deploy-latest` release; nginx serves the files.
+
+Details — URL mapping table, API list, OAuth flow, nginx notes and deployment order — are in [`FRONTEND_SPLIT.md`](FRONTEND_SPLIT.md).
 
 ### Database Schema (Core Tables)
 
@@ -146,14 +162,13 @@ Plugins use Spring AOP to intercept service methods — zero modification to cor
 
 **Naming conventions:**
 - Plugin name must end with `-plugin` (e.g. `redis-cache-plugin`)
-- Theme plugins must start with `theme-` (e.g. `theme-simple-plugin`)
 - Plugin package must be `co.yiiu.pybbs.plugin`
 - Must compile with JDK 8
 
 **Available plugins:**
 - `comment-layer-plugin` — Nested/layered comment sorting
 - `redis-cache-plugin` — Redis cache for common queries
-- `theme-simple-plugin` — Simple alternative theme
+- `theme-simple-plugin` — Freemarker theme (no longer applicable: the backend does not render pages any more)
 
 ### System Configuration (Admin Panel)
 
@@ -161,7 +176,7 @@ All settings are managed from the admin panel without touching config files:
 
 | Category | Settings |
 |----------|---------|
-| Basic | Site name, intro, URL, page size, theme, cookie settings |
+| Basic | Site name, intro, URL, page size, cookie settings |
 | Email | SMTP host, username, password |
 | Upload | Upload path, static URL, avatar size limit, cloud storage |
 | Score | Points for creating/deleting topics & comments, up-voting |
@@ -185,14 +200,17 @@ All settings are managed from the admin panel without touching config files:
 
 ### 项目简介
 
-PyBBS 是一款用 Java 开发的实用 BBS 论坛系统。它提供完整的社区功能平台，包括：面向用户的前台、面向管理员的后台以及 REST API 接口。系统支持富文本/Markdown 内容编辑、基于标签的话题分类、用户积分/声望体系、基于 WebSocket 的实时通知、多语言（I18N）支持，以及面向可扩展性的插件架构。
+PyBBS 是一款用 Java 开发的实用 BBS 论坛系统，提供完整的社区功能平台。项目采用前后端分离：**Java 后端只提供 JSON 接口**，**用户端和管理端是两个独立的 React 前端**，后端不再渲染任何 HTML 页面。系统支持富文本/Markdown 内容编辑、基于标签的话题分类、用户积分/声望体系、基于 WebSocket 的实时通知、多语言（I18N）支持，以及面向可扩展性的插件架构。
 
 ### 访问地址
 
-| 页面 | 地址 | 账号密码 |
-|------|------|---------|
-| 论坛前台 | `http://localhost:8080/` | 自行注册 |
-| 管理后台 | `http://localhost:8080/adminlogin` | `admin` / `123123` |
+| 页面 | 地址（本地开发） | 账号密码 |
+|------|------------------|---------|
+| 后端接口 | `http://localhost:8089/`（端口在 `application.yml`） | — |
+| 用户端前端 | `http://localhost:3000/` | 自行注册 |
+| 管理端前端 | `http://localhost:3001/login` | `admin` / `123123` |
+
+线上两个前端都是 nginx 托管的静态文件：用户端在 `/`，管理端在 `/admin-ui/`，接口路径转发给后端。老的 `/adminlogin` 地址会跳转到 `/admin-ui/login`。详见[前后端分离](#前后端分离)。
 
 ### 技术栈
 
@@ -201,7 +219,7 @@ PyBBS 是一款用 Java 开发的实用 BBS 论坛系统。它提供完整的社
 | 框架 | Spring Boot 2.2.2 + Undertow |
 | ORM | MyBatis-Plus 3.0.7 |
 | 权限认证 | Apache Shiro |
-| 模板引擎 | Freemarker |
+| 前端 | React + Vite + TypeScript + MUI（独立仓库） |
 | 数据库 | MySQL 5.7 |
 | 缓存 | Redis（Jedis） |
 | 搜索 | Elasticsearch 6.5.3 |
@@ -229,7 +247,7 @@ PyBBS 是一款用 Java 开发的实用 BBS 论坛系统。它提供完整的社
 - **RBAC 权限** — 后台角色权限控制（超级管理员、审核员等）
 - **国际化** — 内置中文（zh_CN）与英文（en_US）
 - **插件架构** — 基于 Spring AOP 的插件系统，零侵入核心代码
-- **主题支持** — 可插拔主题系统，内置 `default` 主题
+- **前后端分离** — 用户端、管理端是独立的 React 应用，后端只提供 JSON 接口
 - **Docker 支持** — 提供 `Dockerfile` 和 `docker-compose.yml`
 
 ### 项目结构
@@ -239,24 +257,37 @@ pybbs/
 ├── src/main/java/co/yiiu/pybbs/
 │   ├── config/          # Spring、Shiro、WebSocket、数据源等配置
 │   ├── controller/
-│   │   ├── admin/       # 后台管理控制器
-│   │   ├── api/         # REST API 控制器
-│   │   └── front/       # 前台页面控制器
+│   │   ├── admin/       # 后台 JSON 接口（/admin/**，token 鉴权）
+│   │   ├── api/         # 用户端 JSON 接口（/api/**）
+│   │   └── front/       # 验证码（/common）、第三方登录跳转与回调（/oauth）
 │   ├── service/         # 业务逻辑（话题、评论、用户、标签……）
-│   ├── directive/       # Freemarker 自定义指令
 │   ├── plugin/          # 插件集成（Redis 等）
 │   └── util/            # 工具类（MD5、Markdown、验证码、IP……）
 ├── src/main/resources/
-│   ├── templates/       # Freemarker 模板（theme/default）
-│   ├── static/          # CSS、JS、图片等静态资源
-│   ├── db/migration/    # Flyway SQL 迁移脚本（V1 → V1.20）
+│   ├── db/migration/    # Flyway SQL 迁移脚本（V1 → V1.22）
 │   └── i18n/            # 国际化消息文件（zh_CN、en_US）
-├── plugins/             # 可选 AOP 插件 & 主题插件
+├── plugins/             # 可选 AOP 插件
+├── fronts/              # 占位目录，前端在各自独立的仓库里
+├── FRONTEND_SPLIT.md    # 前后端分离：链接对照、接口、部署
 ├── docs/                # 项目文档（AsciiDoc / Maven Site）
 ├── Dockerfile
 ├── docker-compose.yml
 └── pom.xml
 ```
+
+### 前后端分离
+
+| 仓库 | 内容 | 访问路径 |
+|------|------|---------|
+| [`co2ffee/zzbbs`](https://github.com/co2ffee/zzbbs)（本仓库） | Java 后端：JSON 接口、验证码、第三方登录回调、WebSocket | 后端端口 |
+| [`co2ffee/zzbbs-forum-web`](https://github.com/co2ffee/zzbbs-forum-web) | 用户端前端（React + Vite + MUI） | `/` |
+| [`co2ffee/zzbbs-admin-web`](https://github.com/co2ffee/zzbbs-admin-web) | 管理端前端（React + Vite + MUI + DataGrid） | `/admin-ui/` |
+
+- 用户端保持原来的页面链接（`/topic/{id}`、`/topic/edit/{id}`、`/user/{username}/topics` 等）。
+- 两个前端都用 `token` HTTP header 鉴权，页面不再依赖服务端 session。
+- 每个前端仓库 push 到 `main` 后构建静态包，发布到固定的 `deploy-latest` release，由 nginx 托管。
+
+链接对照表、接口清单、第三方登录流程、nginx 要点和上线顺序见 [`FRONTEND_SPLIT.md`](FRONTEND_SPLIT.md)。
 
 ### 数据库核心表
 
@@ -321,14 +352,13 @@ docker-compose up -d
 
 **命名规范：**
 - 插件名必须以 `-plugin` 结尾，如 `redis-cache-plugin`
-- 主题插件以 `theme-` 开头，以 `-plugin` 结尾，如 `theme-simple-plugin`
 - 插件包名必须为 `co.yiiu.pybbs.plugin`
 - 必须使用 JDK 8 编译
 
 **内置插件：**
 - `comment-layer-plugin` — 评论盖楼排序
 - `redis-cache-plugin` — 常用查询 Redis 缓存
-- `theme-simple-plugin` — 简洁风格主题
+- `theme-simple-plugin` — Freemarker 主题（已不再适用：后端不再渲染页面）
 
 ### 系统配置（后台管理）
 
@@ -336,7 +366,7 @@ docker-compose up -d
 
 | 分类 | 配置项 |
 |------|-------|
-| 基础配置 | 站点名称、简介、访问域名、分页数量、主题、Cookie 设置 |
+| 基础配置 | 站点名称、简介、访问域名、分页数量、Cookie 设置 |
 | 邮箱配置 | SMTP 地址、用户名、密码 |
 | 上传配置 | 上传路径、静态文件访问地址、头像大小限制、云存储 |
 | 积分配置 | 发帖/删帖/评论/删评/点赞积分规则 |
