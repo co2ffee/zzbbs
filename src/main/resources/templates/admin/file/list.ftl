@@ -1,4 +1,5 @@
 <#include "../layout/layout.ftl">
+<#include "../layout/paginate.ftl">
 <@html page_title="文件管理" page_tab="file">
     <section class="content-header">
         <h1>
@@ -14,19 +15,28 @@
         <div class="box box-info">
             <div class="box-header with-border">
                 <h3 class="box-title">文件列表</h3>
-                <span class="pull-right">
-                    <button onclick="statFiles()" id="statBtn" class="btn btn-primary btn-xs">统计总量</button>
-                    <span id="statResult"></span>
-                </span>
+                <span class="pull-right">共 ${totalCount} 个文件，总大小 <span id="totalSizeText"></span></span>
             </div>
             <div class="box-body">
                 <table class="table table-bordered">
                     <thead>
                     <tr>
                         <th>预览</th>
-                        <th>Key</th>
-                        <th>大小</th>
-                        <th>最后修改时间</th>
+                        <th>
+                            <a href="?sortBy=key&sortOrder=<#if sortBy == 'key' && sortOrder == 'asc'>desc<#else>asc</#if>">
+                                Key<#if sortBy == 'key'><#if sortOrder == 'asc'> ▲<#else> ▼</#if></#if>
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sortBy=size&sortOrder=<#if sortBy == 'size' && sortOrder == 'asc'>desc<#else>asc</#if>">
+                                大小<#if sortBy == 'size'><#if sortOrder == 'asc'> ▲<#else> ▼</#if></#if>
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sortBy=lastModified&sortOrder=<#if sortBy == 'lastModified' && sortOrder == 'asc'>desc<#else>asc</#if>">
+                                最后修改时间<#if sortBy == 'lastModified'><#if sortOrder == 'asc'> ▲<#else> ▼</#if></#if>
+                            </a>
+                        </th>
                         <th>操作</th>
                     </tr>
                     </thead>
@@ -41,7 +51,7 @@
                                 </#if>
                             </td>
                             <td>${file.key}</td>
-                            <td>${(file.size / 1024)?round} KB</td>
+                            <td class="file-size" data-bytes="${file.size?c}"></td>
                             <td>${file.lastModified}</td>
                             <td>
                                 <#if sec.hasPermission("file:delete")>
@@ -54,15 +64,10 @@
                     </#list>
                     </tbody>
                 </table>
-                <#if continuationToken?? && continuationToken != "">
-                    <a href="/admin/file/list" class="btn btn-default btn-sm">回到第一页</a>
-                </#if>
-                <#if truncated>
-                    <a href="/admin/file/list?continuationToken=${nextContinuationToken?url('UTF-8')}"
-                       class="btn btn-primary btn-sm">下一页</a>
-                </#if>
             </div>
         </div>
+        <@paginate currentPage=pageNo totalPage=totalPage actionUrl="/admin/file/list"
+        urlParas="&sortBy=${sortBy}&sortOrder=${sortOrder}"/>
     </section>
     <script>
         function formatBytes(bytes) {
@@ -77,19 +82,10 @@
             return size.toFixed(2) + " " + units[i];
         }
 
-        function statFiles() {
-            var btn = $("#statBtn");
-            btn.prop("disabled", true).text("统计中...");
-            $.get("/admin/file/stats", function (data) {
-                if (data.code === 200) {
-                    $("#statResult").text("共 " + data.detail.count + " 个文件，总大小 " + formatBytes(data.detail.totalSize));
-                } else {
-                    toast(data.description);
-                }
-            }).always(function () {
-                btn.prop("disabled", false).text("统计总量");
-            });
-        }
+        $("#totalSizeText").text(formatBytes(${totalSize?c}));
+        $(".file-size").each(function () {
+            $(this).text(formatBytes(parseInt($(this).data("bytes"))));
+        });
     </script>
     <#if sec.hasPermission("file:delete")>
         <script>

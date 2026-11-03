@@ -7,9 +7,13 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.annotation.Resource;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -19,17 +23,50 @@ import java.util.Map;
 @RequestMapping("/admin/file")
 public class FileAdminController extends BaseAdminController {
 
+    private static final int PAGE_SIZE = 50;
+
     @Resource
     private FileUtil fileUtil;
 
     @RequiresPermissions("file:list")
     @GetMapping("/list")
-    public String list(String continuationToken, Model model) {
-        Map<String, Object> result = fileUtil.listBackblazeObjects(continuationToken, 50);
-        model.addAttribute("files", result.get("files"));
-        model.addAttribute("truncated", result.get("truncated"));
-        model.addAttribute("nextContinuationToken", result.get("nextContinuationToken"));
-        model.addAttribute("continuationToken", continuationToken);
+    public String list(@RequestParam(defaultValue = "1") Integer pageNo,
+                        @RequestParam(defaultValue = "size") String sortBy,
+                        @RequestParam(defaultValue = "desc") String sortOrder,
+                        Model model) {
+        List<Map<String, Object>> files = fileUtil.listAllBackblazeObjects();
+        long totalSize = files.stream().mapToLong(f -> (Long) f.get("size")).sum();
+
+        Comparator<Map<String, Object>> comparator;
+        if ("key".equals(sortBy)) {
+            comparator = Comparator.comparing(f -> (String) f.get("key"));
+        } else if ("lastModified".equals(sortBy)) {
+            comparator = Comparator.comparing(f -> (String) f.get("lastModified"));
+        } else {
+            sortBy = "size";
+            comparator = Comparator.comparing(f -> (Long) f.get("size"));
+        }
+        if (!"asc".equals(sortOrder)) {
+            sortOrder = "desc";
+            comparator = comparator.reversed();
+        }
+        files.sort(comparator);
+
+        int total = files.size();
+        int totalPage = (total + PAGE_SIZE - 1) / PAGE_SIZE;
+        if (pageNo < 1) pageNo = 1;
+        if (totalPage > 0 && pageNo > totalPage) pageNo = totalPage;
+        int fromIndex = (pageNo - 1) * PAGE_SIZE;
+        int toIndex = Math.min(fromIndex + PAGE_SIZE, total);
+        List<Map<String, Object>> pageFiles = fromIndex < toIndex ? files.subList(fromIndex, toIndex) : Collections.emptyList();
+
+        model.addAttribute("files", pageFiles);
+        model.addAttribute("totalCount", total);
+        model.addAttribute("totalSize", totalSize);
+        model.addAttribute("pageNo", pageNo);
+        model.addAttribute("totalPage", totalPage);
+        model.addAttribute("sortBy", sortBy);
+        model.addAttribute("sortOrder", sortOrder);
         return "admin/file/list";
     }
 
@@ -39,12 +76,5 @@ public class FileAdminController extends BaseAdminController {
     public Result delete(String key) {
         boolean ok = fileUtil.deleteBackblazeObject(key);
         return ok ? success() : error("删除失败");
-    }
-
-    @RequiresPermissions("file:list")
-    @GetMapping("/stats")
-    @ResponseBody
-    public Result stats() {
-        return success(fileUtil.getBackblazeBucketStats());
     }
 }

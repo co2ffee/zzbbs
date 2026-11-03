@@ -331,45 +331,11 @@ public class FileUtil {
 	}
 
 	/**
-	 * 分页列出dljblob桶里的文件，供后台管理界面查看
+	 * 完整翻一遍dljblob桶，列出所有文件（S3本身不支持按大小排序/返回总数，排序、统计总量都要在拿到全量列表后自己做）
 	 */
-	public Map<String, Object> listBackblazeObjects(String continuationToken, int maxKeys) {
+	public List<Map<String, Object>> listAllBackblazeObjects() {
 		List<Map<String, Object>> files = new ArrayList<>();
-		Map<String, Object> result = new HashMap<>();
-		try (S3Client s3Client = buildBackblazeS3Client()) {
-			ListObjectsV2Request.Builder builder = ListObjectsV2Request.builder()
-					.bucket(BACKBLAZE_BUCKET_NAME)
-					.maxKeys(maxKeys);
-			if (!StringUtils.isEmpty(continuationToken)) {
-				builder.continuationToken(continuationToken);
-			}
-			ListObjectsV2Response response = s3Client.listObjectsV2(builder.build());
-			String domain = systemConfigService.selectAllConfig().get("backblaze_domain");
-			for (S3Object obj : response.contents()) {
-				Map<String, Object> fileInfo = new HashMap<>();
-				fileInfo.put("key", obj.key());
-				fileInfo.put("size", obj.size());
-				fileInfo.put("lastModified", obj.lastModified().toString());
-				fileInfo.put("url", domain + "/" + obj.key());
-				files.add(fileInfo);
-			}
-			result.put("truncated", response.isTruncated());
-			result.put("nextContinuationToken", response.nextContinuationToken());
-		} catch (Exception e) {
-			log.error("list backblaze objects fail", e);
-			result.put("truncated", false);
-			result.put("nextContinuationToken", null);
-		}
-		result.put("files", files);
-		return result;
-	}
-
-	/**
-	 * 统计dljblob桶里的文件总数和总大小（需要完整翻一遍桶，按需调用，不要在每次翻页时都算）
-	 */
-	public Map<String, Object> getBackblazeBucketStats() {
-		long totalCount = 0;
-		long totalSize = 0;
+		String domain = systemConfigService.selectAllConfig().get("backblaze_domain");
 		String continuationToken = null;
 		try (S3Client s3Client = buildBackblazeS3Client()) {
 			do {
@@ -381,18 +347,19 @@ public class FileUtil {
 				}
 				ListObjectsV2Response response = s3Client.listObjectsV2(builder.build());
 				for (S3Object obj : response.contents()) {
-					totalCount++;
-					totalSize += obj.size();
+					Map<String, Object> fileInfo = new HashMap<>();
+					fileInfo.put("key", obj.key());
+					fileInfo.put("size", obj.size());
+					fileInfo.put("lastModified", obj.lastModified().toString());
+					fileInfo.put("url", domain + "/" + obj.key());
+					files.add(fileInfo);
 				}
 				continuationToken = Boolean.TRUE.equals(response.isTruncated()) ? response.nextContinuationToken() : null;
 			} while (continuationToken != null);
 		} catch (Exception e) {
-			log.error("get backblaze bucket stats fail", e);
+			log.error("list all backblaze objects fail", e);
 		}
-		Map<String, Object> result = new HashMap<>();
-		result.put("count", totalCount);
-		result.put("totalSize", totalSize);
-		return result;
+		return files;
 	}
 
 	/**
