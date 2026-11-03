@@ -201,8 +201,8 @@ public class FileUtil {
 			//默认不指定key的情况下，以文件内容的hash值作为文件名
 			String key = fileName;
 			String upToken = auth.uploadToken(qiniuBucket, key);
-			log.info("qiniuKey:{},qiniuSecret:{},qiniuBucket:{},qiniuDomain:{}", qiniuKey, qiniuSecret, qiniuBucket, qiniuDomain);
-			log.info("key:{},upToken:{}", key, upToken);
+			// 注意：不要把 qiniuKey / qiniuSecret / upToken 这类凭据写进日志
+			log.info("qiniu upload, bucket:{}, domain:{}, key:{}", qiniuBucket, qiniuDomain, key);
 			Response response = uploadManager.put(file.getInputStream(), key, upToken, null, null);
 			log.info("url:{}", qiniuDomain + "/" + fileName);
 			//response.bodyString(): {"hash":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH","key":"FrvhXY3VZrmU6_vUYLdQtk1KKlUH"}
@@ -233,7 +233,8 @@ public class FileUtil {
 						.create(backBlazeKeyId, backBlazeKey, "b2_4j/0.0.1")) {
 					//默认不指定key的情况下，以文件内容的hash值作为文件名
 //                String key = fileName;
-					log.info("backBlazeKeyId:{},backBlazeKey:{},backBlazeBucket:{},backBlazeDomain:{}", backBlazeKeyId, backBlazeKey, backBlazeBucket, backBlazeDomain);
+					// 注意：不要把 backBlazeKeyId / backBlazeKey 这类凭据写进日志
+					log.info("backblaze upload, bucket:{}, domain:{}", backBlazeBucket, backBlazeDomain);
 //                    B2ContentSource source = B2ByteArrayContentSource.build(file.getBytes());
 					B2ContentSource source = B2FileContentSource.build(diskFile);
 					B2UploadFileRequest request = B2UploadFileRequest
