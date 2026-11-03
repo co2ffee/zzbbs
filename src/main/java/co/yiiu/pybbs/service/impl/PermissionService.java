@@ -42,6 +42,13 @@ public class PermissionService implements IPermissionService {
         if (permissionsByRoleId.get("roleId_" + roleId) != null) return permissionsByRoleId.get("roleId_" + roleId);
         List<RolePermission> rolePermissions = rolePermissionService.selectByRoleId(roleId);
         List<Integer> permissionIds = rolePermissions.stream().map(RolePermission::getPermissionId).collect(Collectors.toList());
+        // 角色没有任何权限时必须直接返回空：in(空列表) 在 MyBatis-Plus 里会让条件失效，
+        // 查出的是全部权限，等于“没有分配任何权限的角色 = 超级管理员”
+        if (permissionIds.isEmpty()) {
+            List<Permission> none = new java.util.ArrayList<>();
+            permissionsByRoleId.put("roleId_" + roleId, none);
+            return none;
+        }
         QueryWrapper<Permission> wrapper = new QueryWrapper<>();
         wrapper.lambda().in(Permission::getId, permissionIds);
         List<Permission> permissions = permissionMapper.selectList(wrapper);

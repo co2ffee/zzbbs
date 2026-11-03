@@ -4,6 +4,7 @@ import co.yiiu.pybbs.config.service.EmailService;
 import co.yiiu.pybbs.config.service.TelegramBotService;
 import co.yiiu.pybbs.config.websocket.MyWebSocket;
 import co.yiiu.pybbs.mapper.CommentMapper;
+import co.yiiu.pybbs.util.TodayRange;
 import co.yiiu.pybbs.model.Comment;
 import co.yiiu.pybbs.model.Topic;
 import co.yiiu.pybbs.model.User;
@@ -281,6 +282,6 @@ public class CommentService implements ICommentService {
     // 查询今天新增的话题数
     @Override
     public int countToday() {
-        return commentMapper.countToday();
+        return commentMapper.countToday(TodayRange.start(), TodayRange.end());
     }
 }

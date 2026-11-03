@@ -1,6 +1,7 @@
 package co.yiiu.pybbs.service.impl;
 
 import co.yiiu.pybbs.mapper.TopicMapper;
+import co.yiiu.pybbs.util.TodayRange;
 import co.yiiu.pybbs.model.Tag;
 import co.yiiu.pybbs.model.Topic;
 import co.yiiu.pybbs.model.User;
@@ -242,7 +243,7 @@ public class TopicService implements ITopicService {
     // 查询今天新增的话题数
     @Override
     public int countToday() {
-        return topicMapper.countToday();
+        return topicMapper.countToday(TodayRange.start(), TodayRange.end());
     }
 
     // ---------------------------- api ----------------------------

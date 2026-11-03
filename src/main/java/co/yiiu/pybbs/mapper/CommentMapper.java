@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Date;
 
 /**
  * Created by tomoya.
@@ -23,7 +24,7 @@ public interface CommentMapper extends BaseMapper<Comment> {
     MyPage<Map<String, Object>> selectAllForAdmin(MyPage<Map<String, Object>> iPage, @Param("startDate") String
             startDate, @Param("endDate") String endDate, @Param("username") String username);
 
-    int countToday();
+    int countToday(@Param("start") Date start, @Param("end") Date end);
 
     Comment selectByIdForAdmin(@Param("id") Integer id);
 

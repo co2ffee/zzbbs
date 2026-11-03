@@ -1,8 +1,10 @@
 package co.yiiu.pybbs.mapper;
 
 import co.yiiu.pybbs.model.User;
+import org.apache.ibatis.annotations.Param;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import java.util.Date;
 
 /**
  * Created by tomoya.
@@ -11,5 +13,5 @@ import org.apache.ibatis.annotations.Mapper;
  */
 @Mapper
 public interface UserMapper extends BaseMapper<User> {
-    int countToday();
+    int countToday(@Param("start") Date start, @Param("end") Date end);
 }

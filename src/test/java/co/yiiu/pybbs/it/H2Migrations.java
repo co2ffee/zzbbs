@@ -68,6 +68,10 @@ public final class H2Migrations {
             if (table != null) line = line.replaceFirst("(?i)^(\\s*(?:UNIQUE\\s+)?KEY\\s+)`(\\w+)`", "$1`" + table + "_$2`");
             line = line.replaceAll("(?i)\\s+CHARACTER SET\\s+\\w+", "")       // 列级字符集/排序规则
                     .replaceAll("(?i)\\s+COLLATE\\s+\\w+", "")
+                    // H2 把 text/longtext 当成 CLOB，resultType=map 的查询会返回 Clob 对象，JSON 序列化不了；MySQL 里直接是字符串。
+                    // 测试环境统一用大 varchar，行为和 MySQL 一致
+                    .replaceAll("(?i)\\b(longtext|mediumtext)\\b", "varchar(1000000)")
+                    .replaceAll("(?i)(`\\w+`\\s+)text\\b", "$1varchar(1000000)")
                     .replaceAll("(?i)\\s+AFTER\\s+`\\w+`", "")                      // 列顺序对测试没有意义，H2 的 CHANGE COLUMN 不支持 AFTER
                     .replaceAll("(?i)^(\\s*)ALTER\\s+`(\\w+)`\\s+DROP DEFAULT", "$1ALTER COLUMN `$2` DROP DEFAULT")
                     .replace("b'0'", "0").replace("b'1'", "1");                // BIT(1) 默认值写法
