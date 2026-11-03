@@ -80,7 +80,7 @@ public class SiteApiController extends BaseApiController {
         Map<String, String> config = systemConfigService.selectAllConfig();
         Map<String, Object> data = new LinkedHashMap<>();
         for (String key : Arrays.asList("name", "base_url", "page_size", "content_style",
-                "upload_image_size_limit", "upload_video_size_limit")) {
+                "upload_image_size_limit", "upload_video_size_limit", "websocket", "websocket_url")) {
             if (config.get(key) != null) data.put(key, config.get(key));
         }
         data.put("smsEnabled", !StringUtils.isEmpty(config.get("sms_access_key_id")));
