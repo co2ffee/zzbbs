@@ -110,7 +110,7 @@ Java 只保留接口，已完成：
 
 注意：
 
-- **`TestController` 里曾经硬编码了一个火山引擎（volcengine）API key**，文件已删除，但 key 仍在 git 历史里，需要到火山引擎控制台作废。同时删掉了只被它用到的 `volcengine-java-sdk-ark-runtime` 依赖（版本是 `LATEST`）。
+- `TestController` 里曾经硬编码过一个火山引擎（volcengine）API key（已确认早已废弃），文件已删除，同时删掉了只被它用到的 `volcengine-java-sdk-ark-runtime` 依赖（版本是 `LATEST`）。
 - 数据库里的 `theme` 系统配置项还在，但已经没有作用。
 - `plugins/theme-simple-plugin` 是 Freemarker 主题插件，页面模板删除后不再适用，仓库里保留未动。
 
