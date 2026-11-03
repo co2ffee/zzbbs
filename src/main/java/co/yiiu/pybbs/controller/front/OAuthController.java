@@ -16,6 +16,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.annotation.Resource;
@@ -42,7 +43,13 @@ public class OAuthController extends BaseController {
     private SocialPlugin socialPlugin;
 
     @GetMapping("/redirect/{type}")
-    public String github(@PathVariable("type") String type, HttpSession session) {
+    public String github(@PathVariable("type") String type, @RequestParam(required = false) String spa, HttpSession session) {
+        // spa=1：前后端分离的前端发起的登录，回调后跳回前端的 /oauth-login 页，由前端取 token
+        if ("1".equals(spa)) {
+            session.setAttribute("_oauth_spa", true);
+        } else {
+            session.removeAttribute("_oauth_spa");
+        }
 
         AuthRequest request = socialPlugin.getRequest(type);
 
@@ -93,6 +100,11 @@ public class OAuthController extends BaseController {
         // 将用户token写cookie
         cookieUtil.setCookie(systemConfigService.selectAllConfig().get("cookie_name").toString(), user.getToken());
 
+        if (session.getAttribute("_oauth_spa") != null) {
+            session.removeAttribute("_oauth_spa");
+            // 不把 token 放进 URL，前端回到 /oauth-login 后用 session 调 /api/oauth/session 换取
+            return redirect("/oauth-login");
+        }
         return redirect("/");
     }
 }

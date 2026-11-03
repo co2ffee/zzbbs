@@ -32,6 +32,13 @@ public class SettingsApiController extends BaseApiController {
     @Resource
     private ISystemConfigService systemConfigService;
 
+    // 当前登录用户的最新信息（设置页使用；password/token 不会被序列化）
+    @GetMapping
+    public Result get() {
+        User user = getApiUser();
+        return success(userService.selectByIdWithoutCache(user.getId()));
+    }
+
     // 更新用户个人信息
     @PutMapping
     public Result update(@RequestBody Map<String, String> body, HttpSession session) {
