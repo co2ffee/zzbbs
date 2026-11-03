@@ -7,6 +7,11 @@ import co.yiiu.pybbs.model.Topic;
 import co.yiiu.pybbs.model.User;
 import co.yiiu.pybbs.service.IAdminUserService;
 import co.yiiu.pybbs.service.IPermissionService;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import javax.sql.DataSource;
 import co.yiiu.pybbs.service.IRoleService;
 import co.yiiu.pybbs.service.ITagService;
 import co.yiiu.pybbs.service.ITopicService;
@@ -42,6 +47,10 @@ public class AdminApiTest extends AbstractApiTest {
     private IRoleService roleService;
     @Autowired
     private IPermissionService permissionService;
+    @Autowired
+    private RequestMappingHandlerMapping handlerMapping;
+    @Autowired
+    private DataSource dataSource;
     @Autowired
     private ITopicService topicService;
     @Autowired
@@ -337,5 +346,43 @@ public class AdminApiTest extends AbstractApiTest {
                     .andExpect(jsonPath("$.code").value(201))
                     .andExpect(jsonPath("$.description").value(containsString("日期格式")));
         }
+    }
+
+    /**
+     * 回归：代码里每个 @RequiresPermissions 要求的权限，权限表里都必须存在。
+     * 原来缺了 role:add 和 admin_user:delete，连超级管理员都无法新增角色、删除后台用户。
+     */
+    @Test
+    public void everyRequiredPermissionExistsInPermissionTable() {
+        java.util.Set<String> required = new java.util.TreeSet<>();
+        for (HandlerMethod method : handlerMapping.getHandlerMethods().values()) {
+            RequiresPermissions annotation = method.getMethodAnnotation(RequiresPermissions.class);
+            if (annotation != null) required.addAll(java.util.Arrays.asList(annotation.value()));
+        }
+        assertTrue("应该能扫描到后台接口上的权限要求", required.size() > 20);
+        java.util.Set<String> existing = new java.util.HashSet<>(
+                new JdbcTemplate(dataSource).queryForList("select `value` from permission", String.class));
+        required.removeAll(existing);
+        assertTrue("这些权限代码里要求了，但权限表里没有: " + required, required.isEmpty());
+    }
+
+    /** 超级管理员可以新增角色、删除后台用户（这两个权限原来不存在） */
+    @Test
+    public void superAdmin_canAddRolesAndDeleteAdminUsers() throws Exception {
+        String token = adminToken();
+        mvc.perform(withToken(get("/admin/role/add"), token)).andExpect(jsonPath("$.code").value(200));
+
+        String username = unique("todelete");
+        AdminUser adminUser = new AdminUser();
+        adminUser.setUsername(username);
+        adminUser.setPassword(new BCryptPasswordEncoder().encode(PASSWORD));
+        adminUser.setInTime(new Date());
+        adminUser.setRoleId(2);
+        adminUserService.insert(adminUser);
+        Integer id = adminUserService.selectByUsername(username).getId();
+
+        mvc.perform(withToken(get("/admin/admin_user/delete").param("id", id.toString()), token))
+                .andExpect(jsonPath("$.code").value(200));
+        assertEquals(null, adminUserService.selectByUsername(username));
     }
 }
