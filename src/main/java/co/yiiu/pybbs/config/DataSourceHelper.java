@@ -26,6 +26,8 @@ public class DataSourceHelper {
     @PostConstruct
     public void init() {
         if (siteConfig == null) siteConfig = SpringContextUtil.getBean(SiteConfig.class);
+        // 这一步是给 MySQL 自动建库的；其他数据库（集成测试用的 H2 内存库）不需要
+        if (!siteConfig.getDatasource_driver().toLowerCase().contains("mysql")) return;
         try {
             Class.forName(siteConfig.getDatasource_driver());
             URI uri = new URI(siteConfig.getDatasource_url().replace("jdbc:", ""));

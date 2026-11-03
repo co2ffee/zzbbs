@@ -31,6 +31,8 @@
         <jedis.version>3.0.0</jedis.version>
         <elasticsearch.version>6.5.3</elasticsearch.version>
         <flyway.version>5.2.1</flyway.version>
+        <!-- 默认跳过测试；CI 通过 -DskipTests=false 打开 -->
+        <skipTests>true</skipTests>
         <justauth.version>1.15.5</justauth.version>
     </properties>
 
@@ -179,6 +181,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- 集成测试用的内存库，不连任何真实数据库 -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <!-- JustAuth 第三方统一登录组件 -->
         <dependency>
@@ -267,13 +275,10 @@
                     <layout>ZIP</layout>
                 </configuration>
             </plugin>
-            <!-- 打包发布时，跳过单元测试 -->
+            <!-- 默认跳过测试（保持原来打包发布的行为）；CI 里用 mvn test -DskipTests=false 跑集成测试 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <skipTests>true</skipTests>
-                </configuration>
             </plugin>
         </plugins>
     </build>
