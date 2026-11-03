@@ -70,7 +70,7 @@ export function TopicList({ page, onPage }: { page: Page<TopicItem>; onPage: (n:
 export function Captcha({ onRefresh }: { onRefresh?: () => void }) {
   const [k, setK] = useState(Date.now())
   void onRefresh
-  return <img src={`/captcha?${k}`} alt="captcha" style={{ height: 40, cursor: 'pointer' }} onClick={() => setK(Date.now())} title="点击刷新" />
+  return <img src={`/common/captcha?${k}`} alt="captcha" style={{ height: 40, cursor: 'pointer' }} onClick={() => setK(Date.now())} title="点击刷新" />
 }
 
 export const Title = ({ children }: { children: ReactNode }) => <Typography variant="h5" sx={{ mb: 2 }}>{children}</Typography>

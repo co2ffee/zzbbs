@@ -39,7 +39,7 @@ export default function Login() {
             <TextField label="密码" type="password" {...register('password', { required: '请输入密码' })} error={!!errors.password} helperText={errors.password?.message} />
             <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
               <TextField label="验证码" sx={{ flex: 1 }} {...register('code', { required: '请输入验证码' })} error={!!errors.code} helperText={errors.code?.message} />
-              <img src={`/captcha?${k}`} alt="captcha" style={{ height: 40, cursor: 'pointer' }} onClick={() => setK(Date.now())} />
+              <img src={`/common/captcha?${k}`} alt="captcha" style={{ height: 40, cursor: 'pointer' }} onClick={() => setK(Date.now())} />
             </Stack>
             <Button type="submit" variant="contained" disabled={isSubmitting}>登录</Button>
           </Stack>

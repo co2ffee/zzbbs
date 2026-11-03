@@ -2,7 +2,7 @@
 
 pybbs 后台管理前端：React + Vite + TypeScript + MUI（含 MUI X DataGrid）。纯静态产物，由 nginx 托管，不需要 Node 进程。
 
-对接后端 `/admin/**` JSON 接口，使用 `token` header 鉴权：登录页 `POST /admin/api/login`（表单参数 `username`/`password`/`code`），成功后把返回的 `token` 存在 `localStorage`，之后每个请求带 `token` header。验证码是 `/captcha`，依赖后端 session cookie，所以前端必须与后端同域（开发时用 Vite 代理，线上用 nginx 反向代理）。
+对接后端 `/admin/**` JSON 接口，使用 `token` header 鉴权：登录页 `POST /admin/api/login`（表单参数 `username`/`password`/`code`），成功后把返回的 `token` 存在 `localStorage`，之后每个请求带 `token` header。验证码是 `/common/captcha`，依赖后端 session cookie，所以前端必须与后端同域（开发时用 Vite 代理，线上用 nginx 反向代理）。
 
 ## 开发
 
@@ -28,7 +28,7 @@ nginx 示例（SPA 路径与后端 API 路径不冲突：SPA 页面在 `/admin-u
 
 ```nginx
 location /admin-ui/ { alias /path/to/dist/; try_files $uri $uri/ /admin-ui/index.html; }
-location ~ ^/(admin|captcha|static)/ { proxy_pass http://127.0.0.1:8080; }
+location ~ ^/(admin|common|static)/ { proxy_pass http://127.0.0.1:8080; }
 ```
 
 ## 页面

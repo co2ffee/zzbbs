@@ -9,7 +9,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': backend,
-      '/captcha': backend,
+      '/common': backend,
       '/static': backend,
       '/upload': backend,
     },
