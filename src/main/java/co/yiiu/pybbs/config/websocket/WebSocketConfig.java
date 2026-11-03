@@ -14,7 +14,9 @@ import org.springframework.web.socket.server.standard.ServerEndpointExporter;
 @EnableWebSocket
 public class WebSocketConfig {
 
+    // MockMvc 的 mock servlet 环境里没有 javax.websocket.server.ServerContainer，测试 profile 下不注册
     @Bean
+    @org.springframework.context.annotation.Profile("!test")
     public ServerEndpointExporter serverEndpoint() {
         return new ServerEndpointExporter();
     }

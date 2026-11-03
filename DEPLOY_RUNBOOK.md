@@ -113,6 +113,7 @@
    - 新版带 Flyway 迁移 `V1.22__add_admin_user_token.sql`（给 `admin_user` 加可空的 `token` 列），启动时自动执行。如果之前在开发环境连过生产库已经执行过，Flyway 会跳过。
    - 新版**不再渲染任何 HTML 页面**，`/` 上 8089 直接访问会是 404/JSON，这是预期。
 3. 看日志确认启动正常（`log.file`，没有 Flyway/Shiro/Bean 创建报错）。
+4. **把 `deploy.sh` 末尾的健康检查地址从 `http://127.0.0.1:8089/` 改成 `http://127.0.0.1:8089/api/site`**。新版后端不再渲染页面，`/` 会返回 404，原来的检查会误报“30秒内健康检查未通过”。
 4. 回滚：`bash shutdown.sh && mv pybbs.jar pybbs.jar.new && mv pybbs.jar.bak pybbs.jar && bash start.sh`。**注意：回滚到旧 jar 后，旧 Java 页面会回来，但 nginx 的 `/` 已指向静态文件，需要把 nginx 的 `location /` 一并回滚。**
 
 ## 4. 全链路验证（后端和两个前端都就位之后）

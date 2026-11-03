@@ -9,6 +9,8 @@ import javax.annotation.Resource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.LocaleResolver;
+import org.springframework.web.servlet.ViewResolver;
+import org.springframework.web.servlet.view.InternalResourceViewResolver;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -41,6 +43,14 @@ public class WebMvcConfig extends WebMvcConfigurationSupport {
     @Override
     protected void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/static/**").addResourceLocations("classpath:/static/", "file:./static/");
+    }
+
+    // 删除 Freemarker 后没有任何 ViewResolver，controller 里 return "redirect:/xxx" 会报
+    // "Could not resolve view with name 'redirect:...'"（/adminlogin、/oauth/**、/common/show_img 都在用）。
+    // InternalResourceViewResolver 会处理 redirect:/forward: 前缀，不会解析真实的页面视图。
+    @Bean
+    public ViewResolver viewResolver() {
+        return new InternalResourceViewResolver();
     }
 
     // 配置网站默认语言

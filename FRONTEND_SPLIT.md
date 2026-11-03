@@ -105,6 +105,9 @@ Java 只保留接口，已完成：
 - 删除 `directive/**`（Freemarker 自定义标签）、`FreemarkerConfig`、`ShiroTag`、`util/BaseModel`、`util/LocaleMessageSourceUtil`、`interceptor/UserInterceptor`（原来用来保护页面路由）。
 - 去掉 `pom.xml` 里的 `spring-boot-starter-freemarker`，去掉 `application.yml` 里的 `freemarker` 配置。
 - `GlobalExceptionHandler` 所有错误都返回 JSON（不再渲染主题错误页）。
+- `WebMvcConfig` 里显式注册了 `InternalResourceViewResolver`：删除 Freemarker 后没有任何 ViewResolver，controller 里 `return "redirect:/xxx"`（`/adminlogin`、`/oauth/**`、`/common/show_img`）会报 `Could not resolve view`。
+- `/admin/**` 未登录时由 `ApiUserFilter` 直接返回 `401 + JSON`，不再 302 到登录页（302 的 Location 会带 jsessionid 和内网地址）。
+- `application.yml` 设置了 `server.forward-headers-strategy: native`，在 nginx 后面重定向的 Location 才是 `https://域名`。
 - `IndexAdminController`：删除 session 表单登录；`/adminlogin` 只做 302 跳到 `/admin-ui/login`。
 - `ShiroConfig`：登录页/成功页/无权限页地址改为 `/admin-ui/...`。
 - 保留：`CommonController`（验证码、`show_img`）、`OAuthController`（授权跳转与回调）、`BaseController.getUser()`、`/static/**` 资源映射（本地上传文件）。
