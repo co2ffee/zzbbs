@@ -53,6 +53,20 @@ public class SettingsApiController extends BaseApiController {
         user1.setWebsite(website);
         user1.setBio(bio);
         user1.setEmailNotification(emailNotification);
+        // 头像：浏览器直传到存储桶（getUploadUrl 预签名）后，把 fileUrl 保存到用户资料。
+        // 只接受自己存储域名下的地址，避免被写入任意外部图片地址
+        String avatar = body.get("avatar");
+        if (!StringUtils.isEmpty(avatar)) {
+            boolean allowed = false;
+            for (String key : new String[]{"backblaze_domain", "static_url"}) {
+                String prefix = systemConfigService.selectAllConfig().get(key);
+                if (StringUtils.isEmpty(prefix)) continue;
+                if (!prefix.endsWith("/")) prefix += "/";   // 带上 "/" 边界，防止 cdn.x.com.evil.com 这种前缀绕过
+                if (avatar.startsWith(prefix)) allowed = true;
+            }
+            ApiAssert.isTrue(allowed, "头像地址不合法");
+            user1.setAvatar(avatar);
+        }
         userService.update(user1);
 
         User user2 = getUser();

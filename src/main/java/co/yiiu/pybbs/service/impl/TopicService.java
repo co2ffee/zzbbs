@@ -110,7 +110,8 @@ public class TopicService implements ITopicService {
         topic.setUserId(user.getId());
         topic.setTop(false);
         topic.setGood(false);
-        topic.setView(1);
+        // 新话题的浏览数从 0 开始，作者发帖后跳转到详情页的那一次打开才算第 1 次
+        topic.setView(0);
         topic.setCollectCount(0);
         topic.setCommentCount(0);
         topicMapper.insert(topic);
