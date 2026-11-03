@@ -113,4 +113,16 @@ public class DateUtil {
         return calendar.getTime();
     }
 
+
+    /**
+     * 后台按日期范围筛选用：把 yyyy-MM-dd 校验后加上若干天，仍然返回 yyyy-MM-dd（数据库里按当天 00:00 比较）。
+     * 开始日期传 0 天；结束日期传 1 天，配合 "in_time < 结束日期+1天"，这样结束当天也包含在内。
+     */
+    public static String dayBoundary(String date, int plusDays) {
+        try {
+            return java.time.LocalDate.parse(date.trim()).plusDays(plusDays).toString();
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new co.yiiu.pybbs.exception.ApiException("日期格式不正确，应为 yyyy-MM-dd");
+        }
+    }
 }

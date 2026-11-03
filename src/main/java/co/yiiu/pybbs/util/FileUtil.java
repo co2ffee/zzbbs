@@ -310,7 +310,7 @@ public class FileUtil {
 		result.put("uploadUrl", presigned.url().toString());
 		result.put("fileUrl", backBlazeDomain + "/" + fileName);
 
-		log.info("uploadUrl:{}", presigned.url());
+		// 预签名地址带有 X-Amz-Credential / X-Amz-Signature，不能写进日志，只记录最终的访问地址
 		log.info("fileUrl:{}", backBlazeDomain + "/" + fileName);
 
 		return JSON.toJSONString(result);
@@ -461,5 +461,21 @@ public class FileUtil {
 
 			System.out.println(presignedRequest.url());
 		}
+	}
+
+	/**
+	 * 是不是自己存储域名（backblaze_domain / static_url）下的地址。
+	 * 用来校验前端直传后提交上来的头像、标签图标等地址，避免被写入任意外部地址。
+	 * 前缀判断带 "/" 边界，防止 cdn.example.com.evil.com 这种绕过。
+	 */
+	public boolean isOwnStorageUrl(String url) {
+		if (StringUtils.isEmpty(url)) return false;
+		for (String key : new String[]{"backblaze_domain", "static_url"}) {
+			String prefix = systemConfigService.selectAllConfig().get(key);
+			if (StringUtils.isEmpty(prefix)) continue;
+			if (!prefix.endsWith("/")) prefix += "/";
+			if (url.startsWith(prefix)) return true;
+		}
+		return false;
 	}
 }
