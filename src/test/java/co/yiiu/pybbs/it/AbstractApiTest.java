@@ -38,7 +38,8 @@ public abstract class AbstractApiTest {
 
     /** 测试里用的“验证码”，通过 session 属性 _captcha 注入 */
     protected static final String CAPTCHA = "abcd";
-    protected static final String PASSWORD = "Passw0rd123";
+    // 测试用户的密码每次运行随机生成，源码里不放密码字面量（避免被密钥扫描当成硬编码密码）
+    protected static final String PASSWORD = "Pw" + java.util.UUID.randomUUID().toString().replace("-", "");
     private static final AtomicInteger SEQ = new AtomicInteger();
 
     @Autowired
