@@ -151,7 +151,8 @@ curl -sI https://dljdlj.top/assets/<实际文件名>.js | grep -i cache-control 
 
 1. `cd /home/pybbs && bash deploy.sh`（脚本会备份旧 jar 为 `pybbs.jar.bak`，重启，并检查 8089）。
 2. 注意：
-   - 新版带 Flyway 迁移 `V1.22__add_admin_user_token.sql`（给 `admin_user` 加可空的 `token` 列），启动时自动执行。如果之前在开发环境连过生产库已经执行过，Flyway 会跳过。
+   - 新版带 Flyway 迁移，启动时自动执行，已执行过的会跳过：`V1.22__add_admin_user_token.sql`（给 `admin_user` 加可空的 `token` 列）、`V1.23__add_missing_permissions.sql`（补 `role:add`、`admin_user:delete` 权限并授予超级管理员，幂等）。
+   - 用户端内容需登录后才能查看（`site.login_required`，默认开启）：**先部署前端、后部署后端**，否则旧前端遇到 401 不会自动跳登录页。
    - 新版**不再渲染任何 HTML 页面**，`/` 上 8089 直接访问会是 404/JSON，这是预期。
 3. 看日志确认启动正常（`log.file`，没有 Flyway/Shiro/Bean 创建报错）。
 4. **把 `deploy.sh` 末尾的健康检查地址从 `http://127.0.0.1:8089/` 改成 `http://127.0.0.1:8089/api/site`**。新版后端不再渲染页面，`/` 会返回 404，原来的检查会误报“30秒内健康检查未通过”。
@@ -170,7 +171,8 @@ curl -sI https://dljdlj.top/assets/<实际文件名>.js | grep -i cache-control 
 7. 第三方登录（如已配置 GitHub）：点登录按钮 → GitHub 授权 → 回到 `https://dljdlj.top/oauth-login` → 自动进入首页并已登录。授权平台上的回调地址仍是 `https://dljdlj.top/oauth/{type}/callback`，不用改。
 8. 邮件里的激活链接 `https://dljdlj.top/active?email=...&code=...` 打开后跳到首页并提示激活成功。注意系统配置里的 `base_url` 要是 `https://dljdlj.top`。
 9. 管理端：`https://dljdlj.top/admin-ui/` 登录后台，逐页检查：仪表盘、话题、评论、文件、标签、用户、敏感词、系统设置、后台用户、角色、权限，增删改至少各试一次。
-10. 老链接：`https://dljdlj.top/adminlogin` 跳到 `/admin-ui/login`；`/admin/index` 用浏览器直接访问跳到 `/admin-ui/`。
+10. 登录后才能查看：清掉 `localStorage` 的 `zzbbs_token` 后访问 `/`、`/tags`、`/topic/{id}` 都跳到 `/login`，登录后回到原地址；`/register`、`/login` 可打开；不带 token 的 `curl https://dljdlj.top/api/tags` 返回 401，`/api/site` 返回 200。
+11. 老链接：`https://dljdlj.top/adminlogin` 跳到 `/admin-ui/login`；`/admin/index` 用浏览器直接访问跳到 `/admin-ui/`。
 
 ## 5. 之后的日常更新
 
@@ -179,6 +181,6 @@ curl -sI https://dljdlj.top/assets/<实际文件名>.js | grep -i cache-control 
 
 ## 6. 需要提前知道的限制
 
-- 以上整套没有在带数据库的环境里做过端到端联调，第 4 节的验证请认真做；遇到字段对不上等问题，对照 `FRONTEND_SPLIT.md` 的接口清单排查。
+- 整套已经上线并做过端到端验证；改动后第 4 节的验证仍请认真做，遇到字段对不上等问题，对照 `FRONTEND_SPLIT.md` 的接口清单排查。
 - `plugins/theme-simple-plugin` 是 Freemarker 主题插件，已不再适用，不要部署。
 - Docker 相关：`docker-compose.yml` 映射的是 `8080:8080`，而 `application.yml` 端口是 `8089`，如果用 Docker 部署需要自己核对。
