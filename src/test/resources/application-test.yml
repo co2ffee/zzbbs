@@ -4,3 +4,4 @@ site:
   datasource_url: jdbc:h2:mem:zzbbs;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
   datasource_username: sa
   datasource_password: ""
+  login_required: false

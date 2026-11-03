@@ -1,6 +1,7 @@
 package co.yiiu.pybbs.config;
 
 import co.yiiu.pybbs.interceptor.CommonInterceptor;
+import co.yiiu.pybbs.interceptor.LoginRequiredInterceptor;
 
 import java.util.Locale;
 
@@ -27,6 +28,8 @@ public class WebMvcConfig extends WebMvcConfigurationSupport {
 
     @Resource
     private CommonInterceptor commonInterceptor;
+    @Resource
+    private LoginRequiredInterceptor loginRequiredInterceptor;
 
     @Override
     protected void addCorsMappings(CorsRegistry registry) {
@@ -38,6 +41,8 @@ public class WebMvcConfig extends WebMvcConfigurationSupport {
     protected void addInterceptors(InterceptorRegistry registry) {
         // 配置全局日志拦截器，用于记录用户的请求记录
         registry.addInterceptor(commonInterceptor).addPathPatterns("/**");
+        // 用户端内容需要登录后才能查看
+        registry.addInterceptor(loginRequiredInterceptor).addPathPatterns("/api/**");
     }
 
     @Override
