@@ -43,7 +43,8 @@ public class TopicApiController extends BaseApiController {
 
     // 话题详情
     @GetMapping("/{id}")
-    public Result detail(@PathVariable Integer id, HttpServletRequest request) {
+    public Result detail(@PathVariable Integer id, @RequestParam(defaultValue = "true") boolean countView,
+                         HttpServletRequest request) {
         Map<String, Object> map = new HashMap<>();
         // 查询话题详情
         Topic topic = topicService.selectById(id);
@@ -64,7 +65,8 @@ public class TopicApiController extends BaseApiController {
         // 话题浏览量+1
         String ip = IpUtil.getIpAddr(request);
         ip = ip.replace(":", "_").replace(".", "_");
-        topic = topicService.updateViewCount(topic, ip);
+        // countView=false：前端在点赞/评论等操作后“刷新”详情时使用，不重复计浏览数（原来的页面是 AJAX 局部更新，不会重新加载详情）
+        if (countView) topic = topicService.updateViewCount(topic, ip);
         topic.setContent(SensitiveWordUtil.replaceSensitiveWord(topic.getContent(), "*", SensitiveWordUtil.MinMatchType));
 
         map.put("topic", topic);

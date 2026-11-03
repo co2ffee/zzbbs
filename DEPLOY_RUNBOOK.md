@@ -104,6 +104,47 @@
    - `https://dljdlj.top/topic/1` 直接访问（刷新）不是 404，说明 `try_files` 生效。
 5. 回滚：`mv forum-ui.bak forum-ui`，并把 nginx 里的 `location /` 恢复成转给 8089，`nginx -t && reload`。
 
+## 2.5 浏览器缓存（用户端和管理端都要加）
+
+SPA 的入口 `index.html` 以及所有回退到它的页面路由（`try_files ... /index.html`）如果没有 `Cache-Control` 头，浏览器会按 `Last-Modified` 做启发式缓存，**部署新版后老用户的浏览器可能继续加载旧的 JS**（上线后实测过）。静态资源 `/assets/*` 文件名带 hash，可以长期缓存。
+
+在原有的两个 SPA location 里补上 `add_header`，再各加一个 `assets` 的 location（`add_header` 在 location 里会覆盖外层的设置，所以每个 location 单独写）：
+
+```nginx
+# 用户端（把原来的 location / 改成这样）
+location / {
+    root /home/pybbs/forum-ui;
+    try_files $uri $uri/ /index.html;
+    add_header Cache-Control "no-cache";
+}
+location /assets/ {
+    root /home/pybbs/forum-ui;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+}
+
+# 管理端
+location ^~ /admin-ui/ {
+    alias /home/pybbs/admin-ui/;
+    try_files $uri $uri/ /admin-ui/index.html;
+    add_header Cache-Control "no-cache";
+}
+location ^~ /admin-ui/assets/ {
+    alias /home/pybbs/admin-ui/assets/;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+}
+```
+
+`no-cache` 的意思是“可以缓存，但每次使用前要向服务器确认”，配合 `ETag` 没变化时返回 304，不会多传数据。
+
+改完照例：备份 nginx 配置 → `nginx -t` → `nginx -s reload`，然后验证：
+
+```bash
+curl -sI https://dljdlj.top/ | grep -i cache-control                       # 期望 no-cache
+curl -sI https://dljdlj.top/topic/1 | grep -i cache-control                # 期望 no-cache
+curl -sI https://dljdlj.top/admin-ui/ | grep -i cache-control              # 期望 no-cache
+curl -sI https://dljdlj.top/assets/<实际文件名>.js | grep -i cache-control  # 期望 max-age=31536000, immutable
+```
+
 ## 3. 上线新版后端
 
 前提：PR #1 已合并 master，GitHub Actions 里 `Build and release deploy jar` 成功，release `deploy-latest` 里的 `pybbs.jar` 是新的。
