@@ -239,6 +239,9 @@ public class ExchangeApiTest extends AbstractApiTest {
         int cancelId = orders.get(0).path("id").asInt(); // 按 id 倒序，第一个是“地址2”
         int doneId = orders.get(1).path("id").asInt();
         assertEquals(user.getUsername(), orders.get(0).path("username").asText());
+        // 状态必须是数字 0/1/2（MySQL 驱动会把 tinyint(1) 当布尔返回，管理端就认不出来了）
+        assertTrue("status 应该是数字: " + orders.get(0), orders.get(0).path("status").isNumber());
+        assertEquals(0, orders.get(0).path("status").asInt());
 
         // 标记已处理；已处理的不能再取消，也不能重复标记
         JsonNode done = call(withToken(post("/admin/exchange/order/done"), admin()).param("id", String.valueOf(doneId)).param("remark", "已发货"));
@@ -254,6 +257,12 @@ public class ExchangeApiTest extends AbstractApiTest {
         assertEquals(201, call(withToken(post("/admin/exchange/order/cancel"), admin()).param("id", String.valueOf(cancelId))).path("code").asInt());
         assertEquals("重复取消不能重复退积分", 75, scoreOf(user));
         assertEquals(1, stockOf(pid));
+
+        // 后台列表里：已处理是 1、已取消是 2，能区分开
+        JsonNode after = call(withToken(get("/admin/exchange/order/list").param("username", user.getUsername()), admin())).path("detail").path("records");
+        java.util.Set<Integer> statuses = new java.util.HashSet<>();
+        for (JsonNode o : after) { assertTrue(o.path("status").isNumber()); statuses.add(o.path("status").asInt()); }
+        assertEquals(new java.util.HashSet<>(java.util.Arrays.asList(1, 2)), statuses);
 
         // 用户端能看到状态和备注
         JsonNode mine = call(withToken(get("/api/exchange/orders"), token)).path("detail");
