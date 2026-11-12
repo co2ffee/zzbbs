@@ -29,12 +29,12 @@ public class ExchangeApiController extends BaseApiController {
         return success(map);
     }
 
-    // 兑换。body: {"contact": "联系方式/收货信息（可不填）"}
+    // 兑换：成功后返回后台提前设置好的内容 reward（文本/图片/视频，没设置就是 null）
+    // 以前会带联系方式（body 里的 contact），现在不再收集；老前端还在发 body 也没关系，会被忽略
     @PostMapping("/{id}")
-    public Result exchange(@PathVariable Integer id, @RequestBody(required = false) Map<String, String> body) {
+    public Result exchange(@PathVariable Integer id, @RequestBody(required = false) Map<String, String> ignored) {
         User user = getApiUser();
-        String contact = body == null ? null : body.get("contact");
-        return success(exchangeService.exchange(user, id, contact));
+        return success(exchangeService.exchange(user, id));
     }
 
     // 我的兑换记录

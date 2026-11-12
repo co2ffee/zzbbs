@@ -5,7 +5,7 @@
     <select id="selectAllForAdmin" resultType="map">
         <!-- status 是 tinyint(1)：MySQL 驱动默认把 tinyint(1) 当布尔返回（0 → false，1 和 2 → true），
              管理端既分不出“已处理”和“已取消”，也认不出 0/1/2。所以不用 o.*，把 status 加 0 转成数字再返回 -->
-        select o.id, o.user_id, o.product_id, o.product_name, o.product_image, o.score, o.contact,
+        select o.id, o.user_id, o.product_id, o.product_name, o.product_image, o.score,
                o.status + 0 as status, o.remark, o.in_time, o.update_time, u.username
         from exchange_order o
         left join user u on o.user_id = u.id

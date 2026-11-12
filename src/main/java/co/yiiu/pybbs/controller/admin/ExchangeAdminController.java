@@ -43,23 +43,29 @@ public class ExchangeAdminController extends BaseAdminController {
     }
 
     // 新增（不传 id）或修改（传 id）。image 是直传后拿到的 fileUrl；修改时不传 image 保持原图；
-    // removeImage=true 表示去掉图片（只在修改时有效，同时传了新 image 则以新 image 为准）
+    // removeImage=true 表示去掉图片（只在修改时有效，同时传了新 image 则以新 image 为准）。
+    // 兑换后给用户看的内容：rewardText 文本（修改时不传 = 不变，传空字符串 = 清空）；
+    // rewardUrl + rewardType（image / video）是直传后拿到的文件，removeRewardFile=true 去掉文件
     @RequiresPermissions("exchange_product:edit")
     @PostMapping("/product/save")
     @ResponseBody
     public Result productSave(Integer id, String name, String image, String description, Integer score, Integer stock,
-                              Integer sort, Boolean enabled, Boolean removeImage) {
-        return success(exchangeService.saveProduct(id, name, image, description, score, stock, sort, enabled, removeImage));
+                              Integer sort, Boolean enabled, Boolean removeImage, String rewardText, String rewardType,
+                              String rewardUrl, Boolean removeRewardFile) {
+        return success(exchangeService.saveProduct(id, name, image, description, score, stock, sort, enabled, removeImage,
+                rewardText, rewardType, rewardUrl, removeRewardFile));
     }
 
     // 商品图片的上传地址（预签名，和标签图标一样：浏览器直接 PUT 到存储桶，提交时只带 fileUrl）
     @RequiresPermissions("exchange_product:edit")
     @GetMapping("/product/upload_url")
     @ResponseBody
-    public Result uploadUrl() {
+    public Result uploadUrl(@RequestParam(defaultValue = "image") String type) {
+        ApiAssert.isTrue("image".equals(type) || "video".equals(type), "上传类型只能是 image 或 video");
         String json;
         try {
-            json = fileUtil.awsBlazeUpload(null, "avatar", null);
+            // 商品图片、兑换给用户的图片：image（.jpeg）；兑换给用户的视频：video（.mp4）。文件名是随机 UUID
+            json = fileUtil.awsBlazeUpload(null, "image".equals(type) ? "topic" : "video", null);
         } catch (Exception e) {
             return error("获取上传地址失败，请检查 Backblaze 配置");
         }
@@ -84,16 +90,7 @@ public class ExchangeAdminController extends BaseAdminController {
         return success(exchangeService.selectOrders(pageNo, status, username));
     }
 
-    // 标记已处理（比如已经发货、已经联系用户）
-    @RequiresPermissions("exchange_order:edit")
-    @PostMapping("/order/done")
-    @ResponseBody
-    public Result orderDone(Integer id, String remark) {
-        exchangeService.markDone(id, remark);
-        return success();
-    }
-
-    // 取消：退还积分，限量商品的库存加回去
+    // 取消：退还积分，限量商品的库存加回去，用户也看不到兑换到的内容了
     @RequiresPermissions("exchange_order:edit")
     @PostMapping("/order/cancel")
     @ResponseBody
