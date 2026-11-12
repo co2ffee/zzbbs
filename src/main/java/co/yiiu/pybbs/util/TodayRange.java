@@ -25,7 +25,7 @@ public final class TodayRange {
     }
 
     /** 业务时区：取数据库连接串里的 serverTimezone；没有的话用 JVM 默认时区 */
-    static ZoneId zone() {
+    public static ZoneId zone() {
         try {
             String url = SpringContextUtil.getBean(SiteConfig.class).getDatasource_url();
             if (url != null) {

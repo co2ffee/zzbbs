@@ -151,7 +151,7 @@ curl -sI https://dljdlj.top/assets/<实际文件名>.js | grep -i cache-control 
 
 1. `cd /home/pybbs && bash deploy.sh`（脚本会备份旧 jar 为 `pybbs.jar.bak`，重启，并检查 8089）。
 2. 注意：
-   - 新版带 Flyway 迁移，启动时自动执行，已执行过的会跳过：`V1.22__add_admin_user_token.sql`（给 `admin_user` 加可空的 `token` 列）、`V1.23__add_missing_permissions.sql`（补 `role:add`、`admin_user:delete` 权限并授予超级管理员，幂等）。
+   - 新版带 Flyway 迁移，启动时自动执行，已执行过的会跳过：`V1.22__add_admin_user_token.sql`（给 `admin_user` 加可空的 `token` 列）、`V1.23__add_missing_permissions.sql`（补 `role:add`、`admin_user:delete` 权限并授予超级管理员，幂等）、`V1.24__add_checkin.sql`（新建 `checkin` 签到表，并在积分配置里加 `checkin_enabled`/`checkin_score_min`/`checkin_score_max` 三项）。
    - 用户端内容需登录后才能查看（`site.login_required`，默认开启）：**先部署前端、后部署后端**，否则旧前端遇到 401 不会自动跳登录页。
    - 新版**不再渲染任何 HTML 页面**，`/` 上 8089 直接访问会是 404/JSON，这是预期。
 3. 看日志确认启动正常（`log.file`，没有 Flyway/Shiro/Bean 创建报错）。

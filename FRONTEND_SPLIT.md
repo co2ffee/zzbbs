@@ -71,6 +71,8 @@
 | `GET /api/settings` | 当前登录用户的最新信息 | 设置页的服务端渲染 |
 | `GET /api/oauth/session` | 第三方登录回调后，前端用 session 换 token（token 不进 URL） | 回调里写 cookie |
 | `GET /api/active?email=&code=` | 邮箱激活 | `GET /active` |
+| `GET /api/checkin/status` | 签到状态：是否开启、今天是否已签到、今天获得的积分、连续天数、积分范围 | —（新功能） |
+| `POST /api/checkin` | 每日签到：在后台设置的范围内随机增加积分，每人每天一次（`checkin` 表 `(user_id, checkin_date)` 唯一索引兜底并发） | —（新功能） |
 | `GET /api/comment/{id}` | 取单条评论（编辑页用） | `/comment/edit/{id}` 页面 |
 | 话题详情 `GET /api/topic/{id}` 增加 `otherTopics` | 作者的其他话题 | `tag_other_topic` |
 
