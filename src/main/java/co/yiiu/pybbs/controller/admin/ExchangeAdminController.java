@@ -42,13 +42,14 @@ public class ExchangeAdminController extends BaseAdminController {
         return success(product);
     }
 
-    // 新增（不传 id）或修改（传 id）。image 是直传后拿到的 fileUrl；修改时不传 image 保持原图
+    // 新增（不传 id）或修改（传 id）。image 是直传后拿到的 fileUrl；修改时不传 image 保持原图；
+    // removeImage=true 表示去掉图片（只在修改时有效，同时传了新 image 则以新 image 为准）
     @RequiresPermissions("exchange_product:edit")
     @PostMapping("/product/save")
     @ResponseBody
     public Result productSave(Integer id, String name, String image, String description, Integer score, Integer stock,
-                              Integer sort, Boolean enabled) {
-        return success(exchangeService.saveProduct(id, name, image, description, score, stock, sort, enabled));
+                              Integer sort, Boolean enabled, Boolean removeImage) {
+        return success(exchangeService.saveProduct(id, name, image, description, score, stock, sort, enabled, removeImage));
     }
 
     // 商品图片的上传地址（预签名，和标签图标一样：浏览器直接 PUT 到存储桶，提交时只带 fileUrl）

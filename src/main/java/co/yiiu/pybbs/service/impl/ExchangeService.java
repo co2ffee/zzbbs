@@ -15,6 +15,7 @@ import co.yiiu.pybbs.util.FileUtil;
 import co.yiiu.pybbs.util.MyPage;
 import co.yiiu.pybbs.util.SpringContextUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -144,7 +145,7 @@ public class ExchangeService implements IExchangeService {
 
     @Override
     public ExchangeProduct saveProduct(Integer id, String name, String image, String description, Integer score,
-                                       Integer stock, Integer sort, Boolean enabled) {
+                                       Integer stock, Integer sort, Boolean enabled, Boolean removeImage) {
         name = name == null ? "" : name.trim();
         ApiAssert.isTrue(name.length() >= 1 && name.length() <= 100, "商品名称要填，最多 100 个字");
         ApiAssert.notNull(score, "请填写兑换需要的积分");
@@ -177,8 +178,16 @@ public class ExchangeService implements IExchangeService {
         product.setStock(stock);
         product.setSort(sort == null ? 0 : sort);
         product.setEnabled(enabled == null ? Boolean.TRUE : enabled);
-        if (id == null) productMapper.insert(product);
-        else productMapper.updateById(product);
+        if (id == null) {
+            productMapper.insert(product);
+        } else {
+            productMapper.updateById(product);
+            // 去掉图片：updateById 默认不更新 null 字段，要单独把 image 置空。同时传了新图片就以新图片为准
+            if (Boolean.TRUE.equals(removeImage) && StringUtils.isEmpty(image)) {
+                productMapper.update(null, new UpdateWrapper<ExchangeProduct>().eq("id", id).set("image", null));
+                product.setImage(null);
+            }
+        }
         return product;
     }
 
