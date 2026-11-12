@@ -74,7 +74,7 @@ pybbs/
 │   ├── plugin/          # Plugin integration (Redis, etc.)
 │   └── util/            # Utilities (MD5, Markdown, Captcha, IP …)
 ├── src/main/resources/
-│   ├── db/migration/    # Flyway SQL migrations (V1 → V1.23)
+│   ├── db/migration/    # Flyway SQL migrations (V1 → V1.24)
 │   └── i18n/            # Message bundles (zh_CN, en_US)
 ├── plugins/             # Optional AOP plugins
 ├── fronts/              # Placeholder; the front-ends live in their own repositories
@@ -236,6 +236,7 @@ PyBBS 是一款用 Java 开发的实用 BBS 论坛系统，提供完整的社区
 - **标签系统** — 话题多标签、标签话题数统计
 - **用户系统** — 注册、登录、头像上传、资料编辑、Token 认证；用户端内容需登录后才能查看（`site.login_required`，默认开启）
 - **积分体系** — 发帖、评论、被点赞均可奖励积分，删除则扣除，后台可配置
+- **每日签到** — 每天签到随机获得积分，范围和开关在后台“积分配置”里设置（`checkin_enabled`、`checkin_score_min`、`checkin_score_max`），记录连续签到天数
 - **第三方登录** — 支持 GitHub 登录（通过 JustAuth 可扩展更多平台）
 - **短信登录** — 阿里云短信验证码登录
 - **通知系统** — 站内通知，可开启 WebSocket 实时推送（无需刷新页面）
@@ -264,7 +265,7 @@ pybbs/
 │   ├── plugin/          # 插件集成（Redis 等）
 │   └── util/            # 工具类（MD5、Markdown、验证码、IP……）
 ├── src/main/resources/
-│   ├── db/migration/    # Flyway SQL 迁移脚本（V1 → V1.23）
+│   ├── db/migration/    # Flyway SQL 迁移脚本（V1 → V1.24）
 │   └── i18n/            # 国际化消息文件（zh_CN、en_US）
 ├── plugins/             # 可选 AOP 插件
 ├── fronts/              # 占位目录，前端在各自独立的仓库里
