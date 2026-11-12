@@ -26,7 +26,7 @@ public interface IExchangeService {
 
     /** 新增/修改商品（id 为空是新增） */
     ExchangeProduct saveProduct(Integer id, String name, String image, String description, Integer score, Integer stock,
-                                Integer sort, Boolean enabled);
+                                Integer sort, Boolean enabled, Boolean removeImage);
 
     void deleteProduct(Integer id);
 

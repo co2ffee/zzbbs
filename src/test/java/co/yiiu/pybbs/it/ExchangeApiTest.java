@@ -290,4 +290,48 @@ public class ExchangeApiTest extends AbstractApiTest {
         JsonNode r = json.readTree(mvc.perform(post("/api/exchange/1")).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
         assertTrue(r.toString(), r.path("code").asInt() != 200);
     }
+
+    /** 去掉商品图片：不传 image 保持原图；removeImage=true 去掉；用户端也看不到图片了；同时传新图片以新图片为准 */
+    @Test
+    public void removeProductImage() throws Exception {
+        // 种子数据里的 static_url 就是“自己存储域名”，用它下面的地址当图片
+        String img1 = "http://localhost:8080/static/upload/a.png";
+        String img2 = "http://localhost:8080/static/upload/b.png";
+        JsonNode created = call(withToken(post("/admin/exchange/product/save"), admin()).param("name", "有图的").param("score", "5")
+                .param("image", img1));
+        assertEquals(created.toString(), 200, created.path("code").asInt());
+        int pid = created.path("detail").path("id").asInt();
+        String userToken = loginToken(createUser("eximg").getUsername());
+        java.util.function.Supplier<String> userSeesImage = () -> {
+            try {
+                for (JsonNode p : call(withToken(get("/api/exchange/products"), userToken)).path("detail").path("products")) {
+                    if (p.path("id").asInt() == pid) return p.path("image").isNull() ? null : p.path("image").asText();
+                }
+            } catch (Exception e) { throw new AssertionError(e); }
+            throw new AssertionError("用户端应该能看到这个商品");
+        };
+        assertEquals(img1, userSeesImage.get());
+
+        // 修改时不传 image：保持原图
+        call(withToken(post("/admin/exchange/product/save"), admin()).param("id", String.valueOf(pid)).param("name", "有图的").param("score", "5"));
+        assertEquals(img1, userSeesImage.get());
+
+        // removeImage=true：去掉图片
+        JsonNode removed = call(withToken(post("/admin/exchange/product/save"), admin()).param("id", String.valueOf(pid))
+                .param("name", "有图的").param("score", "5").param("removeImage", "true"));
+        assertEquals(removed.toString(), 200, removed.path("code").asInt());
+        assertEquals(null, userSeesImage.get());
+        assertTrue(call(withToken(get("/admin/exchange/product/get").param("id", String.valueOf(pid)), admin())).path("detail").path("image").isNull());
+
+        // 去掉之后再不传 image 保存，仍然没有图片；再上传新图片就有了
+        call(withToken(post("/admin/exchange/product/save"), admin()).param("id", String.valueOf(pid)).param("name", "有图的").param("score", "5"));
+        assertEquals(null, userSeesImage.get());
+        call(withToken(post("/admin/exchange/product/save"), admin()).param("id", String.valueOf(pid)).param("name", "有图的").param("score", "5").param("image", img2));
+        assertEquals(img2, userSeesImage.get());
+
+        // 同时传了新图片和 removeImage：以新图片为准
+        call(withToken(post("/admin/exchange/product/save"), admin()).param("id", String.valueOf(pid)).param("name", "有图的").param("score", "5")
+                .param("image", img1).param("removeImage", "true"));
+        assertEquals(img1, userSeesImage.get());
+    }
 }
