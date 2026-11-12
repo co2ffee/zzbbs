@@ -20,9 +20,14 @@ public class ExchangeOrder implements Serializable {
     private String productName;
     private String productImage;
     private Integer score;
+    // 已经不再使用（不再收集联系方式），列保留着以免丢老数据
     private String contact;
     private Integer status;
     private String remark;
+    // 兑换后给用户看的内容：文本、文件（图片/视频）
+    private String rewardText;
+    private String rewardType;
+    private String rewardUrl;
     private Date inTime;
     private Date updateTime;
 
@@ -48,4 +53,11 @@ public class ExchangeOrder implements Serializable {
     public void setInTime(Date inTime) { this.inTime = inTime; }
     public Date getUpdateTime() { return updateTime; }
     public void setUpdateTime(Date updateTime) { this.updateTime = updateTime; }
+
+    public String getRewardText() { return rewardText; }
+    public void setRewardText(String rewardText) { this.rewardText = rewardText; }
+    public String getRewardType() { return rewardType; }
+    public void setRewardType(String rewardType) { this.rewardType = rewardType; }
+    public String getRewardUrl() { return rewardUrl; }
+    public void setRewardUrl(String rewardUrl) { this.rewardUrl = rewardUrl; }
 }

@@ -90,9 +90,20 @@ public class ExchangeApiTest extends AbstractApiTest {
         return jdbc().queryForObject("select stock from exchange_product where id = ?", Integer.class, productId);
     }
 
-    private JsonNode exchange(String token, int productId, String contact) throws Exception {
-        return call(withToken(post("/api/exchange/" + productId), token).contentType(MediaType.APPLICATION_JSON)
-                .content(contact == null ? "{}" : "{\"contact\":\"" + contact + "\"}"));
+    private JsonNode exchange(String token, int productId) throws Exception {
+        return call(withToken(post("/api/exchange/" + productId), token));
+    }
+
+    /** 后台新增带“兑换后给用户看的内容”的商品 */
+    private int newRewardProduct(String name, int score, int stock, String text, String type, String url) throws Exception {
+        org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder b = withToken(post("/admin/exchange/product/save"), admin())
+                .param("name", name).param("score", String.valueOf(score)).param("stock", String.valueOf(stock));
+        if (text != null) b.param("rewardText", text);
+        if (type != null) b.param("rewardType", type);
+        if (url != null) b.param("rewardUrl", url);
+        JsonNode r = call(b);
+        assertEquals(r.toString(), 200, r.path("code").asInt());
+        return r.path("detail").path("id").asInt();
     }
 
     @Test
@@ -101,29 +112,114 @@ public class ExchangeApiTest extends AbstractApiTest {
         User user = userWithScore("exok", 100);
         String token = loginToken(user.getUsername());
 
-        JsonNode r = exchange(token, pid, "微信 abc123");
+        JsonNode r = exchange(token, pid);
         assertEquals(r.toString(), 200, r.path("code").asInt());
         assertEquals(30, r.path("detail").path("cost").asInt());
         assertEquals(70, r.path("detail").path("totalScore").asInt());
+        assertTrue("没设置兑换内容就没有 reward", r.path("detail").path("reward").isNull());
         assertEquals(70, scoreOf(user));
         assertEquals(4, stockOf(pid));
 
-        // 商品改名、改价、删除都不影响历史记录（快照）
+        // 商品改名、改价都不影响历史记录（快照）；新记录直接是“已兑换”（1），不需要管理员处理，也不再有联系方式
         call(withToken(post("/admin/exchange/product/save"), admin()).param("id", String.valueOf(pid))
                 .param("name", "改了名字").param("score", "999").param("stock", "4"));
         JsonNode orders = call(withToken(get("/api/exchange/orders"), token)).path("detail");
         assertEquals(1, orders.size());
         assertEquals("马克杯", orders.get(0).path("productName").asText());
         assertEquals(30, orders.get(0).path("score").asInt());
-        assertEquals("微信 abc123", orders.get(0).path("contact").asText());
-        assertEquals(0, orders.get(0).path("status").asInt());
+        assertEquals(1, orders.get(0).path("status").asInt());
+        assertTrue("不再收集联系方式", orders.get(0).path("contact").isMissingNode());
+    }
+
+    /** 兑换后给用户看的内容：商品列表不泄露，兑换后立刻给，我的兑换里能再看到；没兑换的人、取消之后都看不到 */
+    @Test
+    public void reward_isDeliveredOnlyAfterExchange_andSnapshotted() throws Exception {
+        String img = "http://localhost:8080/static/upload/secret.jpeg";
+        int pid = newRewardProduct("教程", 10, -1, "兑换码：ABC-123", "image", img);
+        User buyer = userWithScore("exrwd", 100);
+        User other = userWithScore("exrwdother", 100);
+        String buyerToken = loginToken(buyer.getUsername());
+        String otherToken = loginToken(other.getUsername());
+
+        // 商品列表只告诉有什么类型的内容，不给内容本身
+        JsonNode listed = call(withToken(get("/api/exchange/products"), otherToken)).path("detail").path("products");
+        JsonNode item = null;
+        for (JsonNode p : listed) if (p.path("id").asInt() == pid) item = p;
+        assertTrue(item != null);
+        assertEquals("[\"text\",\"image\"]", item.path("delivers").toString());
+        assertFalse(item.toString().contains("ABC-123"));
+        assertFalse(item.toString().contains("secret.jpeg"));
+        assertTrue(item.path("rewardText").isMissingNode() && item.path("rewardUrl").isMissingNode());
+
+        // 兑换成功立刻拿到内容
+        JsonNode r = exchange(buyerToken, pid);
+        assertEquals(r.toString(), 200, r.path("code").asInt());
+        assertEquals("兑换码：ABC-123", r.path("detail").path("reward").path("text").asText());
+        assertEquals("image", r.path("detail").path("reward").path("type").asText());
+        assertEquals(img, r.path("detail").path("reward").path("url").asText());
+
+        // 我的兑换里能再看到；没兑换的人看不到别人的
+        JsonNode mine = call(withToken(get("/api/exchange/orders"), buyerToken)).path("detail");
+        assertEquals("兑换码：ABC-123", mine.get(0).path("reward").path("text").asText());
+        assertEquals(img, mine.get(0).path("reward").path("url").asText());
+        assertEquals(0, call(withToken(get("/api/exchange/orders"), otherToken)).path("detail").size());
+
+        // 商品之后改了文本、去掉文件、甚至删除：已经兑换的用户看到的还是兑换时的内容（快照）
+        call(withToken(post("/admin/exchange/product/save"), admin()).param("id", String.valueOf(pid)).param("name", "教程")
+                .param("score", "10").param("rewardText", "改了").param("removeRewardFile", "true"));
+        call(withToken(get("/admin/exchange/product/delete").param("id", String.valueOf(pid)), admin()));
+        JsonNode after = call(withToken(get("/api/exchange/orders"), buyerToken)).path("detail");
+        assertEquals("兑换码：ABC-123", after.get(0).path("reward").path("text").asText());
+        assertEquals(img, after.get(0).path("reward").path("url").asText());
+
+        // 管理员取消：积分退还，用户也看不到内容了
+        int orderId = after.get(0).path("id").asInt();
+        assertEquals(200, call(withToken(post("/admin/exchange/order/cancel"), admin()).param("id", String.valueOf(orderId))).path("code").asInt());
+        assertEquals(100, scoreOf(buyer));
+        JsonNode canceled = call(withToken(get("/api/exchange/orders"), buyerToken)).path("detail").get(0);
+        assertEquals(2, canceled.path("status").asInt());
+        assertTrue("取消之后不再给内容: " + canceled, canceled.path("reward").isNull());
+    }
+
+    @Test
+    public void rewardEditing_textClearKeepRemoveAndValidation() throws Exception {
+        String video = "http://localhost:8080/static/upload/v.mp4";
+        int pid = newRewardProduct("视频课", 5, -1, "说明", "video", video);
+        java.util.function.Supplier<JsonNode> get = () -> {
+            try { return call(withToken(get("/admin/exchange/product/get").param("id", String.valueOf(pid)), admin())).path("detail"); }
+            catch (Exception e) { throw new AssertionError(e); }
+        };
+        assertEquals("说明", get.get().path("rewardText").asText());
+        assertEquals("video", get.get().path("rewardType").asText());
+
+        // 修改时不传 reward 相关参数：全都保持不变
+        call(withToken(post("/admin/exchange/product/save"), admin()).param("id", String.valueOf(pid)).param("name", "视频课").param("score", "5"));
+        assertEquals("说明", get.get().path("rewardText").asText());
+        assertEquals(video, get.get().path("rewardUrl").asText());
+
+        // 传空字符串：清空文本，文件还在
+        call(withToken(post("/admin/exchange/product/save"), admin()).param("id", String.valueOf(pid)).param("name", "视频课").param("score", "5").param("rewardText", ""));
+        assertTrue(get.get().path("rewardText").isNull());
+        assertEquals(video, get.get().path("rewardUrl").asText());
+
+        // removeRewardFile：去掉文件
+        call(withToken(post("/admin/exchange/product/save"), admin()).param("id", String.valueOf(pid)).param("name", "视频课").param("score", "5").param("removeRewardFile", "true"));
+        assertTrue(get.get().path("rewardUrl").isNull() && get.get().path("rewardType").isNull());
+
+        // 校验：文件必须是自己存储域名、类型只能是图片或视频、文本不能太长
+        assertEquals(201, call(withToken(post("/admin/exchange/product/save"), admin()).param("name", "x").param("score", "5")
+                .param("rewardUrl", "http://evil.example.com/a.mp4").param("rewardType", "video")).path("code").asInt());
+        assertEquals(201, call(withToken(post("/admin/exchange/product/save"), admin()).param("name", "x").param("score", "5")
+                .param("rewardUrl", video).param("rewardType", "exe")).path("code").asInt());
+        assertEquals(201, call(withToken(post("/admin/exchange/product/save"), admin()).param("name", "x").param("score", "5")
+                .param("rewardText", new String(new char[5001]).replace('\0', 'a'))).path("code").asInt());
     }
 
     @Test
     public void exchange_rejectsWhenScoreNotEnough_withoutChangingAnything() throws Exception {
         int pid = newProduct("贵的", 500, 3, true);
         User user = userWithScore("expoor", 10);
-        JsonNode r = exchange(loginToken(user.getUsername()), pid, null);
+        JsonNode r = exchange(loginToken(user.getUsername()), pid);
         assertEquals(201, r.path("code").asInt());
         assertEquals(10, scoreOf(user));
         assertEquals("积分不够时库存也不能少", 3, stockOf(pid));
@@ -136,16 +232,16 @@ public class ExchangeApiTest extends AbstractApiTest {
         String token = loginToken(user.getUsername());
 
         int last = newProduct("最后一个", 10, 1, true);
-        assertEquals(200, exchange(token, last, null).path("code").asInt());
-        JsonNode soldOut = exchange(token, last, null);
+        assertEquals(200, exchange(token, last).path("code").asInt());
+        JsonNode soldOut = exchange(token, last);
         assertEquals(201, soldOut.path("code").asInt());
         assertEquals(990, scoreOf(user));
 
         int off = newProduct("已下架", 10, -1, false);
-        assertEquals(201, exchange(token, off, null).path("code").asInt());
+        assertEquals(201, exchange(token, off).path("code").asInt());
 
         int unlimited = newProduct("不限量", 10, -1, true);
-        for (int i = 0; i < 3; i++) assertEquals(200, exchange(token, unlimited, null).path("code").asInt());
+        for (int i = 0; i < 3; i++) assertEquals(200, exchange(token, unlimited).path("code").asInt());
         assertEquals("不限量商品的库存保持 -1", -1, stockOf(unlimited));
         assertEquals(960, scoreOf(user));
 
@@ -184,7 +280,7 @@ public class ExchangeApiTest extends AbstractApiTest {
             String token = tokens.get(i);
             fs.add(pool.submit(() -> {
                 start.await();
-                if (exchange(token, pid, null).path("code").asInt() == 200) ok.incrementAndGet();
+                if (exchange(token, pid).path("code").asInt() == 200) ok.incrementAndGet();
                 return null;
             }));
         }
@@ -212,7 +308,7 @@ public class ExchangeApiTest extends AbstractApiTest {
         for (int i = 0; i < n; i++) {
             fs.add(pool.submit(() -> {
                 start.await();
-                if (exchange(token, pid, null).path("code").asInt() == 200) ok.incrementAndGet();
+                if (exchange(token, pid).path("code").asInt() == 200) ok.incrementAndGet();
                 return null;
             }));
         }
@@ -224,33 +320,30 @@ public class ExchangeApiTest extends AbstractApiTest {
     }
 
     @Test
-    public void adminDone_andCancelRefundsOnce() throws Exception {
+    public void adminCancel_refundsOnce_andListStatusesAreNumbers() throws Exception {
         int pid = newProduct("可退的", 25, 2, true);
         User user = userWithScore("excancel", 100);
         String token = loginToken(user.getUsername());
-        exchange(token, pid, "地址1");
-        exchange(token, pid, "地址2");
+        exchange(token, pid);
+        exchange(token, pid);
         assertEquals(50, scoreOf(user));
         assertEquals(0, stockOf(pid));
 
         JsonNode orders = call(withToken(get("/admin/exchange/order/list").param("username", user.getUsername()), admin()))
                 .path("detail").path("records");
         assertEquals(2, orders.size());
-        int cancelId = orders.get(0).path("id").asInt(); // 按 id 倒序，第一个是“地址2”
-        int doneId = orders.get(1).path("id").asInt();
+        int cancelId = orders.get(0).path("id").asInt();
         assertEquals(user.getUsername(), orders.get(0).path("username").asText());
-        // 状态必须是数字 0/1/2（MySQL 驱动会把 tinyint(1) 当布尔返回，管理端就认不出来了）
+        // 状态必须是数字（MySQL 驱动会把 tinyint(1) 当布尔返回，管理端就认不出来了）；新记录直接是“已兑换” 1
         assertTrue("status 应该是数字: " + orders.get(0), orders.get(0).path("status").isNumber());
-        assertEquals(0, orders.get(0).path("status").asInt());
+        assertEquals(1, orders.get(0).path("status").asInt());
+        assertTrue("后台列表不再有联系方式", orders.get(0).path("contact").isMissingNode());
 
-        // 标记已处理；已处理的不能再取消，也不能重复标记
-        JsonNode done = call(withToken(post("/admin/exchange/order/done"), admin()).param("id", String.valueOf(doneId)).param("remark", "已发货"));
-        assertEquals(200, done.path("code").asInt());
-        assertEquals(201, call(withToken(post("/admin/exchange/order/cancel"), admin()).param("id", String.valueOf(doneId))).path("code").asInt());
-        assertEquals(201, call(withToken(post("/admin/exchange/order/done"), admin()).param("id", String.valueOf(doneId))).path("code").asInt());
-        assertEquals(50, scoreOf(user));
+        // “标记已处理”已经没有了（兑换后自动发放）
+        mvc.perform(withToken(post("/admin/exchange/order/done"), admin()).param("id", String.valueOf(cancelId)))
+                .andExpect(status().is4xxClientError());
 
-        // 取消待处理的：退积分、库存加回；重复取消不会重复退
+        // 取消：退积分、库存加回、备注用户能看到；重复取消不会重复退
         assertEquals(200, call(withToken(post("/admin/exchange/order/cancel"), admin()).param("id", String.valueOf(cancelId)).param("remark", "缺货")).path("code").asInt());
         assertEquals(75, scoreOf(user));
         assertEquals(1, stockOf(pid));
@@ -258,20 +351,16 @@ public class ExchangeApiTest extends AbstractApiTest {
         assertEquals("重复取消不能重复退积分", 75, scoreOf(user));
         assertEquals(1, stockOf(pid));
 
-        // 后台列表里：已处理是 1、已取消是 2，能区分开
+        // 后台列表里：已兑换是 1、已取消是 2，能区分开
         JsonNode after = call(withToken(get("/admin/exchange/order/list").param("username", user.getUsername()), admin())).path("detail").path("records");
         java.util.Set<Integer> statuses = new java.util.HashSet<>();
         for (JsonNode o : after) { assertTrue(o.path("status").isNumber()); statuses.add(o.path("status").asInt()); }
         assertEquals(new java.util.HashSet<>(java.util.Arrays.asList(1, 2)), statuses);
 
-        // 用户端能看到状态和备注
         JsonNode mine = call(withToken(get("/api/exchange/orders"), token)).path("detail");
-        boolean sawCanceled = false, sawDone = false;
-        for (JsonNode o : mine) {
-            if (o.path("status").asInt() == 2 && "缺货".equals(o.path("remark").asText())) sawCanceled = true;
-            if (o.path("status").asInt() == 1 && "已发货".equals(o.path("remark").asText())) sawDone = true;
-        }
-        assertTrue(sawCanceled && sawDone);
+        boolean sawCanceled = false;
+        for (JsonNode o : mine) if (o.path("status").asInt() == 2 && "缺货".equals(o.path("remark").asText())) sawCanceled = true;
+        assertTrue(sawCanceled);
     }
 
     @Test

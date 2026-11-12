@@ -21,6 +21,10 @@ public class ExchangeProduct implements Serializable {
     // 数字大的排前面
     private Integer sort;
     private Boolean enabled;
+    // 兑换后给用户看的内容：文本、文件（图片/视频）
+    private String rewardText;
+    private String rewardType;
+    private String rewardUrl;
     private Date inTime;
 
     public Integer getId() { return id; }
@@ -41,4 +45,11 @@ public class ExchangeProduct implements Serializable {
     public void setEnabled(Boolean enabled) { this.enabled = enabled; }
     public Date getInTime() { return inTime; }
     public void setInTime(Date inTime) { this.inTime = inTime; }
+
+    public String getRewardText() { return rewardText; }
+    public void setRewardText(String rewardText) { this.rewardText = rewardText; }
+    public String getRewardType() { return rewardType; }
+    public void setRewardType(String rewardType) { this.rewardType = rewardType; }
+    public String getRewardUrl() { return rewardUrl; }
+    public void setRewardUrl(String rewardUrl) { this.rewardUrl = rewardUrl; }
 }

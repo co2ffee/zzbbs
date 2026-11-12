@@ -14,11 +14,7 @@ public interface ExchangeOrderMapper extends BaseMapper<ExchangeOrder> {
     MyPage<Map<String, Object>> selectAllForAdmin(MyPage<Map<String, Object>> iPage, @Param("status") Integer status,
                                                   @Param("username") String username);
 
-    /** 只有待处理的才能变成已处理（原子操作，防止重复处理） */
-    @Update("update exchange_order set status = 1, remark = #{remark}, update_time = now() where id = #{id} and status = 0")
-    int markDone(@Param("id") Integer id, @Param("remark") String remark);
-
-    /** 只有待处理的才能取消（原子操作，防止重复取消、重复退积分） */
-    @Update("update exchange_order set status = 2, remark = #{remark}, update_time = now() where id = #{id} and status = 0")
+    /** 只有没取消过的（0 老记录的待处理、1 已兑换）才能取消（原子操作，防止重复取消、重复退积分） */
+    @Update("update exchange_order set status = 2, remark = #{remark}, update_time = now() where id = #{id} and status in (0, 1)")
     int markCanceled(@Param("id") Integer id, @Param("remark") String remark);
 }
