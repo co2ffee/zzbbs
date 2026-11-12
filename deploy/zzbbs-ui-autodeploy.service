@@ -1,0 +1,11 @@
+[Unit]
+Description=zzbbs 前端自动部署（检查 GitHub deploy-latest 有没有新版本）
+After=network-online.target
+
+[Service]
+Type=oneshot
+# 可选的环境变量文件（GITHUB_TOKEN 等），不存在也没关系
+EnvironmentFile=-/etc/zzbbs-autodeploy.env
+ExecStart=/bin/bash /home/pybbs/auto-deploy-ui.sh
+# 日志同时写 /home/pybbs/autodeploy.log，这里的输出进 journalctl -u zzbbs-ui-autodeploy
+Nice=10

@@ -176,7 +176,8 @@ curl -sI https://dljdlj.top/assets/<实际文件名>.js | grep -i cache-control 
 
 ## 5. 之后的日常更新
 
-- 用户端/管理端：push 到各自仓库 `main` → Actions 打包 → 服务器执行对应的 `deploy-*-ui.sh`（可选：把这两个脚本的调用加进 `deploy.sh` 开头，用 `|| echo 警告` 防止前端更新失败中断后端部署）。
+- 用户端/管理端（装了自动部署之后）：push 到各自仓库 `main` → Actions 打包 → 服务器的定时任务约 10 分钟内自动上线，安装和排查见 `deploy/INSTALL_AUTODEPLOY.md`；想立刻上线 `systemctl start zzbbs-ui-autodeploy.service`。
+- 用户端/管理端（没装自动部署时）：push 到各自仓库 `main` → Actions 打包 → 服务器执行对应的 `deploy-*-ui.sh`（可选：把这两个脚本的调用加进 `deploy.sh` 开头，用 `|| echo 警告` 防止前端更新失败中断后端部署）。
 - 后端：push 到 `master` → Actions 打 jar → 服务器 `bash deploy.sh`。
 
 ## 6. 需要提前知道的限制

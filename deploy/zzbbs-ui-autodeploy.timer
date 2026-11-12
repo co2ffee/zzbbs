@@ -1,0 +1,11 @@
+[Unit]
+Description=每 10 分钟检查一次前端有没有新版本
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+RandomizedDelaySec=60
+Unit=zzbbs-ui-autodeploy.service
+
+[Install]
+WantedBy=timers.target
