@@ -1,0 +1,11 @@
+[Unit]
+Description=Run zzbbs frontend auto deploy every 10 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=10min
+RandomizedDelaySec=60
+Unit=zzbbs-ui-autodeploy.service
+
+[Install]
+WantedBy=timers.target
