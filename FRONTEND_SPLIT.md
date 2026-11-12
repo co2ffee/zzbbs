@@ -73,6 +73,9 @@
 | `GET /api/active?email=&code=` | 邮箱激活 | `GET /active` |
 | `GET /api/checkin/status` | 签到状态：是否开启、今天是否已签到、今天获得的积分、连续天数、积分范围 | —（新功能） |
 | `POST /api/checkin` | 每日签到：在后台设置的范围内随机增加积分，每人每天一次（`checkin` 表 `(user_id, checkin_date)` 唯一索引兜底并发） | —（新功能） |
+| `GET /api/exchange/products` | 积分兑换：上架的商品（名称、图片、简介、所需积分、库存）和当前用户积分 | —（新功能） |
+| `POST /api/exchange/{id}` | 兑换商品（body 可带 `contact` 联系方式/收货信息）：原子地扣积分、减库存、生成兑换记录 | —（新功能） |
+| `GET /api/exchange/orders` | 我的兑换记录（状态：0 待处理、1 已处理、2 已取消） | —（新功能） |
 | `GET /api/comment/{id}` | 取单条评论（编辑页用） | `/comment/edit/{id}` 页面 |
 | 话题详情 `GET /api/topic/{id}` 增加 `otherTopics` | 作者的其他话题 | `tag_other_topic` |
 
