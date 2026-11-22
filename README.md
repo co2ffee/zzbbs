@@ -74,7 +74,7 @@ pybbs/
 │   ├── plugin/          # Plugin integration (Redis, etc.)
 │   └── util/            # Utilities (MD5, Markdown, Captcha, IP …)
 ├── src/main/resources/
-│   ├── db/migration/    # Flyway SQL migrations (V1 → V1.26)
+│   ├── db/migration/    # Flyway SQL migrations (V1 → V1.27)
 │   └── i18n/            # Message bundles (zh_CN, en_US)
 ├── plugins/             # Optional AOP plugins
 ├── fronts/              # Placeholder; the front-ends live in their own repositories
@@ -266,7 +266,7 @@ pybbs/
 │   ├── plugin/          # 插件集成（Redis 等）
 │   └── util/            # 工具类（MD5、Markdown、验证码、IP……）
 ├── src/main/resources/
-│   ├── db/migration/    # Flyway SQL 迁移脚本（V1 → V1.26）
+│   ├── db/migration/    # Flyway SQL 迁移脚本（V1 → V1.27）
 │   └── i18n/            # 国际化消息文件（zh_CN、en_US）
 ├── plugins/             # 可选 AOP 插件
 ├── fronts/              # 占位目录，前端在各自独立的仓库里
