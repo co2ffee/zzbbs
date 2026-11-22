@@ -1,0 +1,9 @@
+[Unit]
+Description=zzbbs frontend auto deploy (forum-ui / admin-ui)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/pybbs/auto-deploy-ui.sh
+Nice=10
+TimeoutStartSec=900
