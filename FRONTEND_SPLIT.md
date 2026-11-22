@@ -76,6 +76,13 @@
 | `GET /api/exchange/products` | 积分兑换：上架的商品（名称、图片、简介、所需积分、库存）和当前用户积分 | —（新功能） |
 | `POST /api/exchange/{id}` | 兑换商品：原子地扣积分、减库存、生成兑换记录，成功后立刻返回后台提前设置的内容 `reward`（`{text, type, url}`：文本、图片或视频，没设置就是 null）。不再收集联系方式 | —（新功能） |
 | `GET /api/exchange/orders` | 我的兑换记录和兑换到的内容 `reward`（状态：1 已兑换、2 已取消，取消后不再给内容；0 是老的待处理记录） | —（新功能） |
+| `GET /api/market/items` | 用户集市：上架中的商品（卖家、价格、库存、已卖数、`delivers` 会得到什么类型的内容，不含内容本身）和当前用户积分 | —（新功能） |
+| `GET /api/market/my/items` | 我上架过的商品（含内容 `reward`，方便编辑） | —（新功能） |
+| `POST /api/market/item` | 上架（不传 `id`）或修改：`name`、`score`（卖家自己定价）、`stock`（-1 不限量）、`description`、`image`、`rewardText`、`rewardUrl`+`rewardType`（直传后的 fileUrl）、`removeImage`、`removeRewardFile`；至少要有文本或文件，每人最多同时 20 件 | —（新功能） |
+| `POST /api/market/item/{id}/on`、`/off` | 卖家重新上架 / 下架（管理员下架的不能自己上架） | —（新功能） |
+| `POST /api/market/item/{id}/buy` | 购买：原子地占库存、扣买家积分、全额加给卖家，成功后返回 `reward`；不能买自己的 | —（新功能） |
+| `GET /api/market/orders`、`/sales` | 我买到的（含内容）/ 我卖出的（买家、收入） | —（新功能） |
+| `GET /admin/market/item/list`、`POST /item/remove`、`/item/restore` | 后台审核集市商品（能看到内容）、违规下架 / 恢复 | —（新功能） |
 | `GET /api/comment/{id}` | 取单条评论（编辑页用） | `/comment/edit/{id}` 页面 |
 | 话题详情 `GET /api/topic/{id}` 增加 `otherTopics` | 作者的其他话题 | `tag_other_topic` |
 

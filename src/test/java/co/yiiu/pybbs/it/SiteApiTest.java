@@ -39,6 +39,9 @@ public class SiteApiTest extends AbstractApiTest {
     @Test
     public void top100_exposesOnlyPublicFields() throws Exception {
         User user = createUser("rank");
+        // 所有测试共用一个库，别的测试会给很多用户加积分；这里给自己一个足够高的积分，保证一定进前 100，不依赖测试执行顺序
+        user.setScore(Integer.MAX_VALUE / 2);
+        userService.update(user);
         mvc.perform(get("/api/top100").param("limit", "100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
